@@ -16,6 +16,7 @@
             --cafe-yellow: #fef3c7;
             --cafe-hover: #f3ece7;
             --cafe-green: #81b29a;
+            --cafe-blue: #a8dadc;
         }
 
         body {
@@ -47,11 +48,18 @@
         .info-box {
             background-color: var(--cafe-yellow);
             border-radius: 1rem;
-            max-width: 800px; 
-            margin: 1.5rem auto;
             padding: 1.5rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             height: 100%;
+        }
+
+        .lesson-box {
+            background-color: white;
+            border: 3px solid var(--cafe-blue);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .accordion-header {
@@ -124,15 +132,40 @@
         }
 
         .link-item:hover {
-            background-color: var(--cafe-accent);
-            color: white;
-            padding-left: 1.5rem;
-            box-shadow: 0 2px 5px rgba(224, 122, 95, 0.3);
+            background-color: var(--cafe-hover);
+            padding-left: 1.25rem;
+        }
+
+        .item-link-text {
+            flex-grow: 1;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .item-link-text:hover {
+            color: var(--cafe-accent);
+            font-weight: bold;
         }
 
         .section-icon {
             font-size: 1.8rem;
             margin-right: 1rem;
+        }
+
+        .lesson-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            transition: transform 0.2s, background-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .lesson-step:hover {
+            background-color: var(--cafe-hover);
+            transform: translateY(-5px);
         }
 
         footer {
@@ -148,10 +181,11 @@
         }
 
         .progress-checkbox {
-            margin-right: 10px;
-            width: 18px;
-            height: 18px;
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
+            accent-color: var(--cafe-accent);
         }
     </style>
 </head>
@@ -161,8 +195,8 @@
         <div class="max-w-5xl mx-auto px-6">
             <div class="flex justify-around items-center py-4 font-bold tracking-wider">
                 <a href="#" class="hover:text-amber-200 transition text-lg">TOP</a>
-                <a href="#checking" class="hover:text-amber-200 transition text-lg">Checking</a>
                 <a href="#thinking" class="hover:text-amber-200 transition text-lg">Thinking</a>
+                <a href="#checking" class="hover:text-amber-200 transition text-lg">Checking</a>
                 <a href="#reflection" class="hover:text-amber-200 transition text-lg">Reflection</a>
                 <a href="#slide" class="hover:text-amber-200 transition text-lg">Slide</a>
                 <a href="#print" class="hover:text-amber-200 transition text-lg">Print</a>
@@ -178,29 +212,55 @@
             </h1>
         </div>
         
-        <div class="mt-8 unit-grid max-w-4xl mx-auto px-4">
-            <!-- News Area -->
-            <div class="info-box border-4 border-amber-300 w-full m-0 text-left">
-                <p class="font-bold text-xl mb-2">📢 News</p>
-                <p class="font-bold text-2xl">次回の数学検定：7/11（土）</p>
-                <p class="text-lg mt-3 opacity-80">※ 3年生はラストチャンス！</p>
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="unit-grid">
+                <!-- News Area -->
+                <div class="info-box border-4 border-amber-300 text-left">
+                    <p class="font-bold text-xl mb-2">📢 News</p>
+                    <p class="font-bold text-2xl">次回の数学検定：7/11（土）</p>
+                    <p class="text-lg mt-3 opacity-80">※ 3年生はラストチャンス！</p>
+                </div>
+                <!-- Exam Range Area -->
+                <div class="info-box border-4 border-green-300 text-left">
+                    <p class="font-bold text-xl mb-2">📝 What the test will cover</p>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                            <p class="font-bold border-b border-green-700/30 mb-1">【数列】</p>
+                            <p class="text-xs">・等差・等比数列</p>
+                            <p class="text-xs">・いろいろな数列の和</p>
+                            <p class="text-xs">・漸化式(基本)</p>
+                        </div>
+                        <div>
+                            <p class="font-bold border-b border-green-700/30 mb-1">【統計的推測】</p>
+                            <p class="text-xs">・確率分布</p>
+                            <p class="text-xs">・二項分布</p>
+                            <p class="text-xs">・正規分布</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <!-- Exam Range Area -->
-            <div class="info-box border-4 border-green-300 w-full m-0 text-left">
-                <p class="font-bold text-xl mb-2">📝 試験範囲予定</p>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                        <p class="font-bold border-b border-green-700/30 mb-1">【数列】</p>
-                        <p class="text-xs">・等差・等比数列</p>
-                        <p class="text-xs">・いろいろな数列の和</p>
-                        <p class="text-xs">・漸化式(基本パターン)</p>
-                    </div>
-                    <div>
-                        <p class="font-bold border-b border-green-700/30 mb-1">【統計的な推測】</p>
-                        <p class="text-xs">・確率変数と確率分布</p>
-                        <p class="text-xs">・二項分布</p>
-                        <p class="text-xs">・正規分布</p>
-                    </div>
+
+            <!-- Todays Lesson Area -->
+            <div class="lesson-box text-left">
+                <p class="font-bold text-xl mb-4 flex items-center">
+                    <span class="mr-2 text-2xl">☕️</span> Today's Lesson
+                </p>
+                <div class="grid grid-cols-3 gap-4">
+                    <a href="#thinking" class="lesson-step">
+                        <span class="text-3xl mb-2">💡</span>
+                        <span class="font-bold">Thinking</span>
+                        <span class="text-xs opacity-60">思考の時間</span>
+                    </a>
+                    <a href="#checking" class="lesson-step">
+                        <span class="text-3xl mb-2">✔️</span>
+                        <span class="font-bold">Checking</span>
+                        <span class="text-xs opacity-60">基本の確認</span>
+                    </a>
+                    <a href="#reflection" class="lesson-step">
+                        <span class="text-3xl mb-2">📝</span>
+                        <span class="font-bold">Reflection</span>
+                        <span class="text-xs opacity-60">今日の振り返り</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -208,32 +268,6 @@
 
     <main class="mx-auto px-10 py-12">
         
-        <!-- Checking Section -->
-        <section id="checking" class="mb-12 border-b-2 border-amber-100 pb-6">
-            <div class="accordion-header text-3xl font-bold" onclick="toggleAccordion('checking-content')">
-                <span><span class="section-icon">✔️</span>Checking</span>
-                <span class="arrow transition-transform">▼</span>
-            </div>
-            <div id="checking-content" class="accordion-content">
-                <div class="unit-grid">
-                    <div class="unit-section">
-                        <div class="unit-header" onclick="toggleNested(this, 'unit-数列-checking')">数列</div>
-                        <div id="unit-数列-checking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <label class="link-item"><input type="checkbox" class="progress-checkbox">・基本事項の確認</label>
-                            <label class="link-item"><input type="checkbox" class="progress-checkbox">・漸化式チャート</label>
-                        </div>
-                    </div>
-                    <div class="unit-section">
-                        <div class="unit-header" onclick="toggleNested(this, 'unit-統計-checking')">統計的な推測</div>
-                        <div id="unit-統計-checking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <label class="link-item"><input type="checkbox" class="progress-checkbox">・確率分布の復習</label>
-                            <label class="link-item"><input type="checkbox" class="progress-checkbox">・二項分布の性質</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- Thinking Section -->
         <section id="thinking" class="mb-12 border-b-2 border-amber-100 pb-6">
             <div class="accordion-header text-3xl font-bold" onclick="toggleAccordion('thinking-content')">
@@ -245,15 +279,65 @@
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-数列-thinking')">数列</div>
                         <div id="unit-数列-thinking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・数列の極限を考える</a>
-                            <a href="#" class="link-item">・数学的帰納法の落とし穴</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・数列の極限を考える</a>
+                            </div>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・数学的帰納法の落とし穴</a>
+                            </div>
                         </div>
                     </div>
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-統計-thinking')">統計的な推測</div>
                         <div id="unit-統計-thinking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・標本から全体を予測する</a>
-                            <a href="#" class="link-item">・有意水準と検定の考え方</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・標本から全体を予測する</a>
+                            </div>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・有意水準と検定の考え方</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Checking Section -->
+        <section id="checking" class="mb-12 border-b-2 border-amber-100 pb-6">
+            <div class="accordion-header text-3xl font-bold" onclick="toggleAccordion('checking-content')">
+                <span><span class="section-icon">✔️</span>Checking</span>
+                <span class="arrow transition-transform">▼</span>
+            </div>
+            <div id="checking-content" class="accordion-content">
+                <div class="unit-grid">
+                    <div class="unit-section">
+                        <div class="unit-header" onclick="toggleNested(this, 'unit-数列-checking')">数列</div>
+                        <div id="unit-数列-checking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="数列 No.1 基本.html" target="_blank" class="item-link-text">・数列の基本</a>
+                            </div>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="数列 No.2 等差数列の一般項.html" target="_blank" class="item-link-text">・等差数列の一般項</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="unit-section">
+                        <div class="unit-header" onclick="toggleNested(this, 'unit-統計-checking')">統計的な推測</div>
+                        <div id="unit-統計-checking" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="https://example.com/math-b/statistics-basic" target="_blank" class="item-link-text">・基本事項の確認</a>
+                            </div>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・二項分布の性質</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -271,13 +355,19 @@
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-数列-reflection')">数列</div>
                         <div id="unit-数列-reflection" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・ポートフォリオ作成用シート</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・ポートフォリオ作成用シート</a>
+                            </div>
                         </div>
                     </div>
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-統計-reflection')">統計的な推測</div>
                         <div id="unit-統計-reflection" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・データの分析振り返り</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・データの分析振り返り</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -295,13 +385,19 @@
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-数列-slide')">数列</div>
                         <div id="unit-数列-slide" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・11/01 授業スライド</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・11/01 授業スライド</a>
+                            </div>
                         </div>
                     </div>
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-統計-slide')">統計的な推測</div>
                         <div id="unit-統計-slide" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・10/25 授業スライド</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・10/25 授業スライド</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -319,13 +415,19 @@
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-数列-print')">数列</div>
                         <div id="unit-数列-print" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・演習：漸化式Lv.1〜3</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・演習：漸化式Lv.1〜3</a>
+                            </div>
                         </div>
                     </div>
                     <div class="unit-section">
                         <div class="unit-header" onclick="toggleNested(this, 'unit-統計-print')">統計的な推測</div>
                         <div id="unit-統計-print" class="pl-4 hidden bg-white/50 rounded-lg p-2 mt-1">
-                            <a href="#" class="link-item">・演習：区間推定</a>
+                            <div class="link-item">
+                                <input type="checkbox" class="progress-checkbox">
+                                <a href="#" class="item-link-text">・演習：区間推定</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -339,15 +441,15 @@
                     <span class="mr-3">🛠️</span>Learning Tools
                 </h3>
                 <div class="grid grid-cols-3 gap-4">
-                    <a href="#" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100">
+                    <a href="https://www.geogebra.org/" target="_blank" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100 no-underline">
                         <p class="font-bold text-amber-700">GeoGebra</p>
                         <p class="text-xs opacity-60">グラフ・統計計算</p>
                     </a>
-                    <a href="#" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100">
+                    <a href="https://www.nhk.or.jp/kokokoza/library/tv/suub/" target="_blank" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100 no-underline">
                         <p class="font-bold text-amber-700">NHK高校講座</p>
                         <p class="text-xs opacity-60">動画で学ぶ数学B</p>
                     </a>
-                    <a href="#" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100">
+                    <a href="https://www.desmos.com/calculator?lang=ja" target="_blank" class="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition text-center border border-amber-100 no-underline">
                         <p class="font-bold text-amber-700">Desmos</p>
                         <p class="text-xs opacity-60">関数電卓・グラフ</p>
                     </a>
