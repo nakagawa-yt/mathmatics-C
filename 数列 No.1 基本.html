@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ja" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数列マスター</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&family=Kiwi+Maru:wght@400;500&display=swap" rel="stylesheet">
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+
+  <style>
+    .font-display { font-family: 'Zen Maru Gothic', sans-serif; }
+    .font-body { font-family: 'Kiwi Maru', serif; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+
+    @keyframes confetti {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-90px) rotate(540deg); opacity: 0; }
+    }
+
+    @keyframes wobble {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-1deg); }
+      75% { transform: rotate(1deg); }
+    }
+
+    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    .animate-floaty { animation: floaty 2.8s ease-in-out infinite; }
+    .animate-wobble { animation: wobble 0.25s ease-in-out; }
+
+    .confetti-particle {
+      position: absolute;
+      animation: confetti 1s ease-out forwards;
+      pointer-events: none;
+    }
+
+    .math-bg {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 214, 165, 0.45) 0%, transparent 35%),
+        radial-gradient(circle at 80% 20%, rgba(255, 196, 224, 0.4) 0%, transparent 35%),
+        radial-gradient(circle at 30% 80%, rgba(191, 219, 254, 0.45) 0%, transparent 35%),
+        linear-gradient(180deg, #fffaf5 0%, #fef6ff 45%, #f3fbff 100%);
+    }
+
+    .card-soft {
+      background: rgba(255, 255, 255, 0.82);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 10px 30px rgba(209, 177, 132, 0.15),
+        0 6px 12px rgba(180, 190, 255, 0.12);
+      backdrop-filter: blur(6px);
+    }
+
+    .input-field {
+      background: #fffdfc;
+      border: 2px solid #f7d9c4;
+      color: #5b4b4b;
+      transition: all 0.25s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .input-field:focus {
+      background: #ffffff;
+      border-color: #f9a8d4;
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(249, 168, 212, 0.18);
+    }
+
+    .hint-box {
+      background: #fff8db;
+      border: 2px dashed #f6c453;
+    }
+
+    .soft-btn {
+      border-radius: 999px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    .soft-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.1);
+    }
+
+    .soft-panel {
+      background: #fffdf8;
+      border: 2px dashed #e9c7ff;
+    }
+
+    body {
+      box-sizing: border-box;
+      color: #6b5b73;
+    }
+  </style>
+</head>
+
+<body class="h-full math-bg font-body overflow-auto">
+  <div id="app" class="min-h-full p-4 md:p-8">
+
+    <!-- スタート画面 -->
+    <div id="start-screen" class="flex flex-col items-center justify-center min-h-full animate-fade-in">
+      <div class="text-center max-w-2xl mx-auto">
+        <div class="text-6xl mb-6 animate-floaty">🌷</div>
+
+        <h1 id="main-title" class="font-display text-4xl md:text-5xl font-bold mb-4 text-pink-500">
+          数列マスター
+        </h1>
+
+        <p class="text-lg text-purple-500 mb-2">〜一般項から第4項までをみつけよう〜</p>
+        <p class="text-purple-400 mb-8">4つのステージをのんびりクリアしよう！</p>
+
+        <div class="card-soft rounded-[2rem] p-6 mb-8 text-left">
+          <h2 class="font-display text-xl font-bold mb-4 text-rose-400">📚 このゲームでやること</h2>
+          <p class="leading-relaxed text-stone-600">
+            与えられた一般項から、
+            <span class="text-pink-500 font-bold">a₁, a₂, a₃, a₄</span>
+            を求めます。<br>
+            <span class="text-sky-500 font-bold">n = 1, 2, 3, 4</span>
+            を順に代入して、
+            <span class="text-violet-500 font-bold">数列の規則</span>
+            に少しずつ慣れていこう！
+          </p>
+        </div>
+
+        <button onclick="startGame()"
+          class="soft-btn px-8 py-4 bg-gradient-to-r from-pink-300 to-rose-300 text-white font-display font-bold text-xl">
+          🌼 スタート
+        </button>
+      </div>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="game-screen" class="hidden min-h-full">
+      <div class="max-w-3xl mx-auto">
+
+        <!-- 進捗バー -->
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-purple-400">すすみぐあい</span>
+            <span id="progress-text" class="text-sm text-pink-500 font-bold">1 / 4</span>
+          </div>
+          <div class="h-4 bg-white/70 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar"
+              class="h-full bg-gradient-to-r from-pink-300 via-yellow-200 to-sky-300 rounded-full transition-all duration-500"
+              style="width: 25%"></div>
+          </div>
+        </div>
+
+        <!-- 問題カード -->
+        <div id="question-card" class="card-soft rounded-[2rem] p-6 md:p-8 animate-fade-in relative">
+
+          <div class="flex items-center gap-3 mb-6 flex-wrap">
+            <span id="stage-badge" class="px-4 py-2 bg-pink-100 rounded-full text-pink-500 font-bold text-sm">
+              STAGE 1
+            </span>
+            <span id="stage-subtitle" class="text-purple-400 text-sm">等差数列型</span>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-purple-400 mb-2">次の数列 {aₙ} について、初項から第4項までを求めよう。</p>
+            <div id="equation" class="text-2xl md:text-3xl font-bold text-center py-6 px-4 bg-white/80 rounded-[1.5rem] text-violet-500 shadow-sm"></div>
+          </div>
+
+          <div class="mb-4">
+            <button id="hint-btn" onclick="toggleHint()"
+              class="soft-btn w-full py-3 bg-gradient-to-r from-yellow-200 to-amber-200 text-amber-700 font-display font-bold text-lg">
+              💡 ヒントを見る
+            </button>
+          </div>
+
+          <div id="hint-container" class="hint-box rounded-[1.5rem] p-4 mb-6 hidden">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl">🫶</span>
+              <div>
+                <p class="font-bold text-amber-600 mb-1">ヒント</p>
+                <p id="hint-text" class="text-stone-600 text-sm"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div>
+              <label class="block text-purple-400 text-sm mb-2">a₁</label>
+              <input type="number" id="answer-a1" class="input-field w-full px-4 py-3 rounded-[1.2rem] text-xl text-center" placeholder="?">
+            </div>
+            <div>
+              <label class="block text-purple-400 text-sm mb-2">a₂</label>
+              <input type="number" id="answer-a2" class="input-field w-full px-4 py-3 rounded-[1.2rem] text-xl text-center" placeholder="?">
+            </div>
+            <div>
+              <label class="block text-purple-400 text-sm mb-2">a₃</label>
+              <input type="number" id="answer-a3" class="input-field w-full px-4 py-3 rounded-[1.2rem] text-xl text-center" placeholder="?">
+            </div>
+            <div>
+              <label class="block text-purple-400 text-sm mb-2">a₄</label>
+              <input type="number" id="answer-a4" class="input-field w-full px-4 py-3 rounded-[1.2rem] text-xl text-center" placeholder="?">
+            </div>
+          </div>
+
+          <button onclick="checkAnswer()"
+            class="soft-btn w-full py-4 bg-gradient-to-r from-emerald-300 to-teal-300 text-white font-display font-bold text-xl">
+            ✓ 答え合わせ
+          </button>
+
+          <div id="result-container" class="hidden mt-6 p-4 rounded-[1.5rem] text-center"></div>
+
+          <button id="next-btn" onclick="nextQuestion()"
+            class="hidden soft-btn w-full mt-4 py-4 bg-gradient-to-r from-sky-300 to-indigo-300 text-white font-display font-bold text-xl">
+            次の問題へ →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果画面 -->
+    <div id="result-screen" class="hidden min-h-full flex flex-col items-center justify-center animate-fade-in">
+      <div class="text-center max-w-2xl mx-auto card-soft rounded-[2rem] p-8">
+        <div id="final-confetti" class="relative">
+          <div class="text-8xl mb-6 animate-floaty">🎀</div>
+        </div>
+
+        <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 text-orange-400">
+          クリア！
+        </h2>
+        <p id="final-message" class="text-xl text-stone-600 mb-6">すてき！数列マスターだね！</p>
+
+        <div class="soft-panel rounded-[1.5rem] p-6 mb-6 text-left">
+          <h3 class="font-bold text-pink-500 mb-4">📝 今日のまとめ</h3>
+          <ul class="space-y-3 text-stone-600">
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span><span>一般項では <strong class="text-violet-500">n に自然数を代入</strong>して項を求める</span></li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span><span>等差数列・等比数列・2次式・等差×等比型の違いを意識する</span></li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span><span>まず <strong class="text-violet-500">a₁, a₂, a₃, a₄</strong> を丁寧に求めることが大切</span></li>
+          </ul>
+        </div>
+
+        <p id="rank-text" class="text-lg text-rose-400 mb-6">称号：数列マスター</p>
+
+        <button onclick="restartGame()"
+          class="soft-btn px-8 py-4 bg-gradient-to-r from-pink-300 to-purple-300 text-white font-display font-bold text-xl">
+          🔄 もう一度挑戦
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const defaultConfig = {
+      game_title: '数列マスター',
+      encouragement_text: 'すてき！数列マスターだね！',
+      font_family: 'Zen Maru Gothic',
+      font_size: 16
+    };
+
+    const questions = [
+      {
+        stage: 1,
+        subtitle: '等差数列型',
+        equation: 'aₙ = 3n + 2',
+        hint: 'n = 1, 2, 3, 4 を順に代入しよう。',
+        answers: [5, 8, 11, 14],
+        explanation: 'a₁ = 3×1+2 = 5\na₂ = 3×2+2 = 8\na₃ = 3×3+2 = 11\na₄ = 3×4+2 = 14'
+      },
+      {
+        stage: 2,
+        subtitle: '等比数列型',
+        equation: 'aₙ = 2 × 3^(n-1)',
+        hint: 'n = 1 のとき、3^(n-1) = 3^0 = 1 になることに注意しよう。',
+        answers: [2, 6, 18, 54],
+        explanation: 'a₁ = 2×3^0 = 2\na₂ = 2×3^1 = 6\na₃ = 2×3^2 = 18\na₄ = 2×3^3 = 54'
+      },
+      {
+        stage: 3,
+        subtitle: '2次式の数列',
+        equation: 'aₙ = n² + 1',
+        hint: 'n を2乗してから 1 を足そう。',
+        answers: [2, 5, 10, 17],
+        explanation: 'a₁ = 1²+1 = 2\na₂ = 2²+1 = 5\na₃ = 3²+1 = 10\na₄ = 4²+1 = 17'
+      },
+      {
+        stage: 4,
+        subtitle: '等差×等比型',
+        equation: 'aₙ = n × 2^(n-1)',
+        hint: 'n の部分と 2^(n-1) の部分を分けて考えよう。',
+        answers: [1, 4, 12, 32],
+        explanation: 'a₁ = 1×2^0 = 1\na₂ = 2×2^1 = 4\na₃ = 3×2^2 = 12\na₄ = 4×2^3 = 32'
+      }
+    ];
+
+    let currentQuestion = 0;
+    let config = { ...defaultConfig };
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (newConfig) => {
+          config = { ...defaultConfig, ...newConfig };
+          applyConfig();
+        },
+        mapToCapabilities: (cfg) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: {
+            get: () => cfg.font_family || defaultConfig.font_family,
+            set: (v) => { cfg.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+          },
+          fontSizeable: {
+            get: () => cfg.font_size || defaultConfig.font_size,
+            set: (v) => { cfg.font_size = v; window.elementSdk.setConfig({ font_size: v }); }
+          }
+        }),
+        mapToEditPanelValues: (cfg) => new Map([
+          ['game_title', cfg.game_title || defaultConfig.game_title],
+          ['encouragement_text', cfg.encouragement_text || defaultConfig.encouragement_text]
+        ])
+      });
+    }
+
+    function applyConfig() {
+      const title = config.game_title || defaultConfig.game_title;
+      const encouragement = config.encouragement_text || defaultConfig.encouragement_text;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      document.getElementById('main-title').textContent = title;
+      document.getElementById('final-message').textContent = encouragement;
+
+      document.querySelectorAll('.font-display').forEach(el => {
+        el.style.fontFamily = `${fontFamily}, sans-serif`;
+      });
+
+      document.body.style.fontSize = `${fontSize}px`;
+    }
+
+    function startGame() {
+      currentQuestion = 0;
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      document.getElementById('result-screen').classList.add('hidden');
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const q = questions[currentQuestion];
+
+      document.getElementById('stage-badge').textContent = `STAGE ${q.stage}`;
+      document.getElementById('stage-subtitle').textContent = q.subtitle;
+      document.getElementById('equation').textContent = q.equation;
+      document.getElementById('hint-text').textContent = q.hint;
+
+      document.getElementById('answer-a1').value = '';
+      document.getElementById('answer-a2').value = '';
+      document.getElementById('answer-a3').value = '';
+      document.getElementById('answer-a4').value = '';
+
+      document.getElementById('hint-container').classList.add('hidden');
+      document.getElementById('hint-btn').textContent = '💡 ヒントを見る';
+      document.getElementById('result-container').classList.add('hidden');
+      document.getElementById('next-btn').classList.add('hidden');
+
+      document.getElementById('progress-text').textContent = `${currentQuestion + 1} / 4`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestion + 1) / 4) * 100}%`;
+
+      const card = document.getElementById('question-card');
+      card.classList.remove('animate-fade-in');
+      void card.offsetWidth;
+      card.classList.add('animate-fade-in');
+    }
+
+    function toggleHint() {
+      const hintBox = document.getElementById('hint-container');
+      const hintBtn = document.getElementById('hint-btn');
+      const hidden = hintBox.classList.contains('hidden');
+
+      if (hidden) {
+        hintBox.classList.remove('hidden');
+        hintBtn.textContent = '💡 ヒントを閉じる';
+      } else {
+        hintBox.classList.add('hidden');
+        hintBtn.textContent = '💡 ヒントを見る';
+      }
+    }
+
+    function checkAnswer() {
+      const q = questions[currentQuestion];
+      const a1 = parseInt(document.getElementById('answer-a1').value);
+      const a2 = parseInt(document.getElementById('answer-a2').value);
+      const a3 = parseInt(document.getElementById('answer-a3').value);
+      const a4 = parseInt(document.getElementById('answer-a4').value);
+
+      const resultContainer = document.getElementById('result-container');
+
+      if ([a1, a2, a3, a4].some(v => isNaN(v))) {
+        resultContainer.className = 'mt-6 p-4 rounded-[1.5rem] text-center bg-yellow-100 text-amber-700';
+        resultContainer.innerHTML = `
+          <p class="text-4xl mb-2">🤔</p>
+          <p class="font-bold text-xl mb-2">値を入力してみよう</p>
+          <p class="text-sm">a₁, a₂, a₃, a₄ のすべてに数値を入れてね！</p>
+        `;
+        resultContainer.classList.remove('hidden');
+        return;
+      }
+
+      const isCorrect =
+        a1 === q.answers[0] &&
+        a2 === q.answers[1] &&
+        a3 === q.answers[2] &&
+        a4 === q.answers[3];
+
+      if (isCorrect) {
+        resultContainer.className = 'mt-6 p-4 rounded-[1.5rem] text-center bg-emerald-100 text-emerald-700';
+        resultContainer.innerHTML = `
+          <p class="text-4xl mb-2">🎉</p>
+          <p class="font-bold text-xl mb-2">正解！</p>
+          <p class="text-sm">${q.explanation.replace(/\n/g, '<br>')}</p>
+        `;
+        document.getElementById('next-btn').classList.remove('hidden');
+
+        if (currentQuestion === questions.length - 1) {
+          document.getElementById('next-btn').textContent = '結果を見る 🌈';
+        } else {
+          document.getElementById('next-btn').textContent = '次の問題へ →';
+        }
+
+        createConfetti('question-card');
+      } else {
+        const wrongItems = [];
+        if (a1 !== q.answers[0]) wrongItems.push('a₁');
+        if (a2 !== q.answers[1]) wrongItems.push('a₂');
+        if (a3 !== q.answers[2]) wrongItems.push('a₃');
+        if (a4 !== q.answers[3]) wrongItems.push('a₄');
+
+        resultContainer.className = 'mt-6 p-4 rounded-[1.5rem] text-center bg-rose-100 text-rose-600';
+        resultContainer.innerHTML = `
+          <p class="text-4xl mb-2">🐣</p>
+          <p class="font-bold text-xl mb-2">もう一回やってみよう！</p>
+          <p class="text-sm">${wrongItems.join('、')} を見直してみよう。</p>
+        `;
+
+        const card = document.getElementById('question-card');
+        card.classList.add('animate-wobble');
+        setTimeout(() => card.classList.remove('animate-wobble'), 250);
+      }
+
+      resultContainer.classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+
+      if (currentQuestion >= questions.length) {
+        showResults();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+      document.getElementById('rank-text').textContent = '称号：数列マスター';
+
+      for (let i = 0; i < 20; i++) {
+        setTimeout(() => createConfetti('final-confetti'), i * 100);
+      }
+    }
+
+    function restartGame() {
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('start-screen').classList.remove('hidden');
+    }
+
+    function createConfetti(targetId) {
+      const emojis = ['✨', '🌷', '🫧', '🌟', '💫'];
+
+      for (let i = 0; i < 8; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'confetti-particle';
+        particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        particle.style.left = `${Math.random() * 100}%`;
+        particle.style.top = '55%';
+        particle.style.fontSize = `${Math.random() * 18 + 14}px`;
+        particle.style.animationDuration = `${Math.random() * 0.5 + 0.8}s`;
+
+        document.getElementById(targetId).appendChild(particle);
+        setTimeout(() => particle.remove(), 1000);
+      }
+    }
+
+    applyConfig();
+  </script>
+</body>
+</html>
