@@ -1,1 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ベクトルぱずるⅠ</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
+    <style>
+        :root {
+            --bg-top: #1a2a6c;
+            --bg-bottom: #b21f1f;
+            --card-bg: rgba(255, 255, 255, 0.98);
+            --accent-purple: #6c5ce7;
+            --text-color: #2d3436;
+            --grid-line: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom));
+            background-attachment: fixed;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .container {
+            background: var(--card-bg);
+            width: 95%;
+            max-width: 900px;
+            padding: 30px;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .instruction-card {
+            background: #f8faff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e6ed;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 2px;
+            background-color: var(--grid-line);
+            border: 3px solid #636e72;
+            width: fit-content;
+            margin: 0 auto;
+            padding: 10px;
+            position: relative;
+        }
+
+        .cell {
+            background: white;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cell:hover { background: #f1f2f6; }
+        .cell.selected { background: #ffeaa7; border: 3px solid #f1c40f; box-sizing: border-box; }
+
+        .animal-icon { font-size: 32px; pointer-events: none; }
+        .animal-name { font-size: 10px; color: #b2bec3; margin-top: 4px; pointer-events: none; }
+
+        .controls { margin-top: 25px; }
+        .answer-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-purple);
+            margin-bottom: 15px;
+            height: 30px;
+        }
+
+        .main-btn {
+            background-color: var(--accent-purple);
+            color: white;
+            border: none;
+            padding: 15px 60px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #4834d4;
+            transition: 0.1s;
+        }
+        .main-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #4834d4; }
+
+        .feedback { min-height: 40px; margin-top: 15px; font-weight: bold; font-size: 1.3rem; }
+
+        #result-view { display: none; }
+        .form-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="game-view">
+        <div style="color: var(--accent-purple); font-weight: bold; margin-bottom: 10px;">
+            Mission <span id="q-num">1</span> / 8
+        </div>
+        
+        <div class="instruction-card" id="q-text"></div>
+
+        <div class="grid-container" id="grid"></div>
+
+        <div class="controls">
+            <div class="answer-display"><span id="selected-name">マスをクリックして答える</span></div>
+            <button class="main-btn" id="action-btn" onclick="handleAction()">決定する</button>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+    </div>
+
+    <div id="result-view">
+        <div style="font-size: 4rem; margin-bottom: 10px;">👑</div>
+        <h2>完全クリア！</h2>
+        <p>ベクトルの考え方がわかったかな？</p>
+        <div class="form-container">
+            <iframe src="https://forms.gle/V25oNLEgodQkRzMx6" frameborder="0" width="100%" height="100%">読み込んでいます…</iframe>
+        </div>
+        <button class="main-btn" style="margin-top: 25px;" onclick="location.reload()">もう一度あそぶ</button>
+    </div>
+</div>
+
+<script>
+    const animalData = [
+        { icon: "🐶", name: "イヌ" }, { icon: "🐱", name: "ネコ" }, { icon: "🐭", name: "ネズミ" }, { icon: "🐹", name: "ハムスター" }, { icon: "🐰", name: "ウサギ" }, { icon: "🦊", name: "キツネ" },
+        { icon: "🐻", name: "クマ" }, { icon: "🐼", name: "パンダ" }, { icon: "🐨", name: "コアラ" }, { icon: "🐯", name: "トラ" }, { icon: "🦁", name: "ライオン" }, { icon: "🐮", name: "ウシ" },
+        { icon: "🐷", name: "ブタ" }, { icon: "🐸", name: "カエル" }, { icon: "🐵", name: "サル" }, { icon: "🐔", name: "ニワトリ" }, { icon: "🐧", name: "ペンギン" }, { icon: "🐦", name: "トリ" },
+        { icon: "🐤", name: "ひよこ" }, { icon: "🦉", name: "フクロウ" }, { icon: "🐴", name: "ウマ" }, { icon: "🐝", name: "ハチ" }, { icon: "🐙", name: "タコ" }, { icon: "🐢", name: "カメ" },
+        { icon: "🦖", name: "ダイナソー" }, { icon: "🐋", name: "クジラ" }, { icon: "🐘", name: "ゾウ" }, { icon: "🦒", name: "キリン" }, { icon: "🐆", name: "ヒョウ" }, { icon: "🦓", name: "シマウマ" }
+    ];
+
+    const animals = [];
+    const cellWidth = 80;
+    const gap = 2;
+    const gridCols = 6;
+    const gridRows = 5;
+    const canvasWidth = (gridCols * cellWidth) + ((gridCols - 1) * gap);
+    const canvasHeight = (gridRows * cellWidth) + ((gridRows - 1) * gap);
+
+    const questions = [
+        { text: "ベクトル <b>ダイナソー → クジラ</b> と等しいベクトルを考えます。<br><b>ライオン</b> を始点にすると、終点はどこ？", ans: "ウシ", vectors: [{start:"ダイナソー", end:"クジラ"}] },
+        { text: "ベクトル <b>ブタ → ネコ</b> と等しいベクトルを考えます。<br><b>タコ</b> を始点にすると、終点はどこ？", ans: "ウシ", vectors: [{start:"ブタ", end:"ネコ"}] },
+        // Q3: 右に3, 上に2 の斜め移動。始点「サル」
+        { text: "ベクトル <b>ダイナソー → ニワトリ</b> と等しいベクトルを考えます。<br><b>サル</b> を始点にすると、終点はどこ？", ans: "キツネ", vectors: [{start:"ダイナソー", end:"ニワトリ"}] },
+        // Q4: 左に3, 上に3 の大きな斜め移動
+        { text: "ベクトル <b>カメ → ネズミ</b> と等しいベクトルを考えます。<br><b>キリン</b> を始点にすると、終点はどこ？", ans: "クマ", vectors: [{start:"カメ", end:"ネズミ"}] },
+        { text: "2つのベクトルを足します！<br>ベクトル <b>サル → ニワトリ</b> と <b>サル → コアラ</b> を足します。<br><b>ゾウ</b> を始点にすると、終点はどこ？", ans: "ハチ", vectors: [{start:"サル", end:"ニワトリ"}, {start:"サル", end:"コアラ"}] },
+        { text: "ベクトル <b>パンダ → キツネ</b> と <b>フクロウ → ダイナソー</b> を足します。<br><b>クマ</b> を始点にすると、終点はどこ？", ans: "トラ", vectors: [{start:"パンダ", end:"キツネ"}, {start:"フクロウ", end:"ダイナソー"}] },
+        { text: "<b>ペンギン → トラ</b> と <b>ニワトリ → パンダ</b> を足します。<br><b>ヒョウ</b> を始点にすると、終点はどこ？", ans: "カエル", vectors: [{start:"ペンギン", end:"トラ"}, {start:"ニワトリ", end:"パンダ"}] },
+        { text: "最後は3つ！<br><b>イヌ→ネコ、</b><b>ニワトリ→ウサギ、</b><b>トラ→ゾウ</b> の3つを足します。<br><b>コアラ</b> を始点にすると、終点はどこ？", ans: "ニワトリ", vectors: [{start:"イヌ", end:"ネコ"}, {start:"ニワトリ", end:"ウサギ"}, {start:"トラ", end:"ゾウ"}] }
+    ];
+
+    let currentIdx = 0;
+    let selectedName = "";
+    let isCorrected = false;
+
+    function initGrid() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = "";
+        const canvas = document.createElement('canvas');
+        canvas.id = 'vector-overlay';
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        canvas.style.cssText = 'position: absolute; top: 10px; left: 10px; pointer-events: none; z-index: 100;';
+        grid.appendChild(canvas);
+
+        let idx = 0;
+        for (let y = gridRows - 1; y >= 0; y--) {
+            for (let x = 0; x < gridCols; x++) {
+                const a = animalData[idx];
+                const pixelX = (x * (cellWidth + gap)) + (cellWidth / 2);
+                const pixelY = (((gridRows - 1) - y) * (cellWidth + gap)) + (cellWidth / 2);
+                animals.push({ ...a, x: x, y: y, pixelX: pixelX, pixelY: pixelY });
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.innerHTML = `<span class="animal-icon">${a.icon}</span><span class="animal-name">${a.name}</span>`;
+                cell.onclick = (e) => selectAnimal(a.name, e.currentTarget);
+                grid.appendChild(cell);
+                idx++;
+            }
+        }
+    }
+
+    function drawArrow(ctx, fromx, fromy, tox, toy, headLength) {
+        const angle = Math.atan2(toy - fromy, tox - fromx);
+        ctx.beginPath();
+        ctx.moveTo(fromx, fromy);
+        ctx.lineTo(tox, toy);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(tox, toy);
+        ctx.lineTo(tox - headLength * Math.cos(angle - Math.PI / 6), toy - headLength * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(tox - headLength * Math.cos(angle + Math.PI / 6), toy - headLength * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawVectors() {
+        const canvas = document.getElementById('vector-overlay');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const q = questions[currentIdx];
+        if (!q.vectors) return;
+        ctx.lineWidth = 3;
+        const color = "#6c5ce7";
+        const headLength = 12;
+        q.vectors.forEach(v => {
+            const startA = animals.find(a => a.name === v.start);
+            const endA = animals.find(a => a.name === v.end);
+            if (startA && endA) {
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                drawArrow(ctx, startA.pixelX, startA.pixelY, endA.pixelX, endA.pixelY, headLength);
+            }
+        });
+    }
+
+    function selectAnimal(name, element) {
+        if (isCorrected) return;
+        selectedName = name;
+        document.getElementById('selected-name').innerText = name;
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
+    function loadQuestion() {
+        isCorrected = false;
+        selectedName = "";
+        const q = questions[currentIdx];
+        document.getElementById('q-num').innerText = currentIdx + 1;
+        document.getElementById('q-text').innerHTML = q.text;
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('selected-name').innerText = "マスをクリックして答えてね！";
+        document.getElementById('action-btn').innerText = "決定する";
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+        drawVectors();
+    }
+
+    function handleAction() {
+        if (isCorrected) {
+            currentIdx++;
+            if (currentIdx < questions.length) loadQuestion();
+            else showResult();
+        } else {
+            const q = questions[currentIdx];
+            const fb = document.getElementById('feedback');
+            if (!selectedName) return;
+            if (selectedName === q.ans) {
+                fb.innerText = "正解です！ ✨";
+                fb.style.color = "#27ae60";
+                document.getElementById('action-btn').innerText = "次の問題へ";
+                isCorrected = true;
+            } else {
+                fb.innerText = "そこじゃないみたい…もう一度考えてみて！";
+                fb.style.color = "#e67e22";
+            }
+        }
+    }
+
+    function showResult() {
+        document.getElementById('game-view').style.display = "none";
+        document.getElementById('result-view').style.display = "block";
+    }
+
+    initGrid();
+    loadQuestion();
+</script>
+
+</body>
+</html>
