@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>わくわく！どうぶつベクトル・パズル</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        :root {
+            --soft-pink: #ffedfa;
+            --main-pink: #ffb7d5;
+            --soft-blue: #e0f2fe;
+            --main-blue: #7dd3fc;
+            --soft-yellow: #fef9c3;
+            --main-yellow: #fde047;
+            --soft-green: #ecfdf5;
+            --main-green: #6ee7b7;
+            --text-color: #57534e;
+            --border-thick: #a8a29e;
+        }
+
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Meiryo', sans-serif;
+            background-color: var(--soft-pink);
+            background-image: radial-gradient(#fff 15%, transparent 16%), radial-gradient(#fff 15%, transparent 16%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-color);
+            padding: 10px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.98);
+            width: 100%;
+            max-width: 850px;
+            padding: 25px;
+            border-radius: 40px;
+            box-shadow: 0 15px 0 var(--main-pink);
+            text-align: center;
+            border: 4px solid var(--main-pink);
+        }
+
+        /* 肉球ステップインジケーター */
+        .step-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .step-bubble {
+            width: 45px; height: 45px;
+            background: #fff; border: 3px solid var(--main-pink);
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: var(--main-pink); font-size: 1.2rem;
+            position: relative;
+        }
+        .step-bubble::before, .step-bubble::after {
+            content: ''; position: absolute; background: var(--main-pink);
+            width: 12px; height: 15px; border-radius: 50%; top: -8px; opacity: 0;
+        }
+        .step-bubble::before { left: 5px; transform: rotate(-20deg); }
+        .step-bubble::after { right: 5px; transform: rotate(20deg); }
+
+        .step-bubble.active { 
+            background: var(--main-yellow); color: var(--text-color); border-color: var(--main-yellow);
+            transform: scale(1.1); animation: bounce 2s infinite;
+        }
+        .step-bubble.active::before, .step-bubble.active::after { opacity: 1; }
+        .step-bubble.completed { background: var(--main-green); border-color: var(--main-green); color: white; }
+        @keyframes bounce { 0%, 100% { transform: scale(1.1) translateY(0); } 50% { transform: scale(1.1) translateY(-5px); } }
+
+        /* もこもこ吹き出し */
+        .instruction-box {
+            background: var(--soft-blue);
+            border-radius: 30px;
+            padding: 15px 25px;
+            margin: 0 auto 20px auto;
+            font-size: 1.15rem;
+            min-height: 4em;
+            display: flex; align-items: center; justify-content: center;
+            line-height: 1.5;
+            border: 3px solid white;
+            box-shadow: 0 5px 0 var(--main-blue);
+        }
+
+        .game-main { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; align-items: flex-start; }
+
+        #stage {
+            position: relative;
+            width: 380px;
+            height: 380px;
+            background: #fff;
+            border-radius: 20px;
+            border: 4px solid var(--main-pink);
+            cursor: crosshair;
+            overflow: hidden;
+        }
+        canvas { position: absolute; top: 0; left: 0; }
+        #animal-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        .animal-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex; flex-direction: column; align-items: center;
+            z-index: 10;
+        }
+        .animal-icon { font-size: 44px; filter: drop-shadow(2px 2px 0 #fff); }
+        .animal-coord {
+            background: white; border: 2px solid var(--main-pink);
+            padding: 2px 8px; border-radius: 12px; font-size: 14px;
+            font-weight: bold; margin-top: 2px;
+        }
+
+        .input-side { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; }
+
+        /* おもいでメモ (ふせん風) */
+        .memo-board {
+            background: #fff9c4;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border-left: 5px solid var(--main-yellow);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.05);
+            display: none;
+            width: 90%;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+        .memo-title { font-weight: bold; font-size: 0.8rem; color: #a16207; margin-bottom: 4px; }
+
+        .math-preview { 
+            font-size: 2.5rem; min-height: 70px; 
+            color: var(--main-blue); font-weight: bold; 
+            display: flex; align-items: center;
+            text-shadow: 2px 2px 0 #fff;
+        }
+
+        #main-input {
+            width: 100%; max-width: 280px; padding: 12px;
+            font-size: 1.4rem; border: 3px solid var(--main-blue);
+            border-radius: 20px; text-align: center; outline: none;
+            background: #fff; box-shadow: 0 4px 0 var(--main-blue);
+        }
+
+        .choice-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .choice-card {
+            padding: 10px 18px; border-radius: 15px; 
+            border: 2px solid var(--main-pink);
+            background: white; cursor: pointer; font-size: 1.1rem;
+            box-shadow: 0 4px 0 var(--main-pink); transition: 0.1s;
+        }
+        .choice-card.selected { background: var(--main-pink); color: white; }
+
+        .go-btn {
+            background-color: var(--main-yellow); color: var(--text-color); border: 2px solid var(--border-thick);
+            padding: 12px 50px; border-radius: 30px; font-size: 1.5rem;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+            margin-top: 15px; width: 100%; max-width: 280px;
+            box-shadow: 0 6px 0 var(--border-thick);
+        }
+        .go-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--border-thick); }
+        .go-btn:disabled { background-color: #e5e7eb; box-shadow: none; border-color: #d1d5db; color: #9ca3af; }
+
+        .feedback-text { min-height: 40px; margin-top: 10px; font-weight: bold; font-size: 1.3rem; }
+
+        #finish-screen { display: none; }
+        .form-box { width: 100%; height: 600px; border: 4px solid var(--soft-pink); border-radius: 25px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="mission-view">
+        <div class="step-container" id="step-dots">
+            <div class="step-bubble active">1</div>
+            <div class="step-bubble">2</div>
+            <div class="step-bubble">3</div>
+            <div class="step-bubble">4</div>
+            <div class="step-bubble">5</div>
+        </div>
+
+        <div class="instruction-box" id="instruction"></div>
+
+        <div class="game-main">
+            <div id="stage">
+                <canvas id="grid-canvas" width="380" height="380"></canvas>
+                <canvas id="line-canvas" width="380" height="380"></canvas>
+                <div id="animal-layer"></div>
+            </div>
+
+            <div class="input-side">
+                <div id="memo" class="memo-board">
+                    <div class="memo-title">📝 メモ</div>
+                    <div id="memo-content"></div>
+                </div>
+                <div id="control-panel" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+                    <div id="math-preview" class="math-preview"></div>
+                    <input type="text" id="main-input" placeholder="( , )" autocomplete="off">
+                    <div id="choice-area" class="choice-row" style="display:none;"></div>
+                </div>
+                <button class="go-btn" id="action-btn" onclick="handleAction()">けってい！</button>
+                <div id="feedback" class="feedback-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="finish-screen">
+        <h1 style="color: var(--main-pink); font-size: 2.5rem; text-shadow: 2px 2px 0 #fff;">はなまる！ 💮</h1>
+        <p style="font-weight: bold;">Formにまとめを記入してね！</p>
+        <iframe src="https://forms.gle/rszxdL7nqesSNgKS7" class="form-box">読み込んでいます…</iframe>
+    </div>
+</div>
+
+<script>
+    const config = {
+        A: { x: 1, y: 1, icon: "🐶", label: "(1, 1)" },
+        B: { x: 4, y: 2, icon: "🐱", label: "(4, 2)" },
+        C: { x: 2, y: 5, icon: "🐰", label: "(2, 5)" },
+        D: { x: -1, y: 4, icon: "🦁", label: "(-1, 4)" }
+    };
+
+    let currentStep = 0, clickedPoint = null, isTransitioning = false, solved = false;
+    const canvasSize = 380, gridScale = 40, originX = 110, originY = 280;
+
+    const instructionEl = document.getElementById('instruction');
+    const feedbackEl = document.getElementById('feedback');
+    const controlPanel = document.getElementById('control-panel');
+    const mainInput = document.getElementById('main-input');
+    const mathPreview = document.getElementById('math-preview');
+    const actionBtn = document.getElementById('action-btn');
+    const animalLayer = document.getElementById('animal-layer');
+    const memoEl = document.getElementById('memo');
+    const memoContent = document.getElementById('memo-content');
+
+    function toPx(x, y) { return { x: originX + x * gridScale, y: originY - y * gridScale }; }
+    function fromPx(px, py) { return { x: Math.round((px - originX) / gridScale), y: Math.round((originY - py) / gridScale) }; }
+
+    function drawSystem() {
+        const ctx = document.getElementById('grid-canvas').getContext('2d');
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+        
+        // --- 1. マス目（細い線）---
+        // Step 1 (currentStep === 0) の時だけ描画
+        if (currentStep === 0) {
+            ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1.5;
+            for(let i=-10; i<=10; i++) {
+                let px = originX + i * gridScale; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, canvasSize); ctx.stroke();
+                let py = originY - i * gridScale; ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(canvasSize, py); ctx.stroke();
+            }
+        }
+
+        // --- 2. x軸・y軸（太い線）---
+        // 全ステップで表示
+        ctx.strokeStyle = "#64748b"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, canvasSize); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(canvasSize, originY); ctx.stroke();
+    }
+
+    function updateStage() {
+        const ctx = document.getElementById('line-canvas').getContext('2d');
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+        animalLayer.innerHTML = "";
+        const showLabel = (currentStep > 0);
+        
+        addAnimal(config.A, showLabel);
+        addAnimal(config.B, showLabel);
+        addAnimal(config.C, showLabel);
+
+        const pA = toPx(config.A.x, config.A.y), pB = toPx(config.B.x, config.B.y), pC = toPx(config.C.x, config.C.y);
+        ctx.setLineDash([8, 8]); ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pB.x, pB.y); ctx.lineTo(pC.x, pC.y); ctx.stroke();
+        ctx.setLineDash([]);
+
+        let lionLabel = (currentStep === 4 && solved) ? config.D.label : "(x, y)";
+
+        if (clickedPoint) {
+            addAnimal({ x: clickedPoint.x, y: clickedPoint.y, icon: "🦁", label: lionLabel }, showLabel);
+        }
+
+        if (currentStep >= 1) {
+            const pD = toPx(config.D.x, config.D.y);
+            if (!clickedPoint) addAnimal({...config.D, label: lionLabel}, showLabel);
+            ctx.strokeStyle = "#ffb7d5"; ctx.lineWidth = 6; ctx.lineJoin = "round";
+            ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pB.x, pB.y); ctx.lineTo(pC.x, pC.y); ctx.lineTo(pD.x, pD.y); ctx.closePath(); ctx.stroke();
+        }
+        drawSystem();
+    }
+
+    function addAnimal(info, withLabel) {
+        const pos = toPx(info.x, info.y);
+        const div = document.createElement('div');
+        div.className = 'animal-marker';
+        div.style.left = pos.x + 'px'; div.style.top = pos.y + 'px';
+        let labelHtml = withLabel ? `<div class="animal-coord">${info.label}</div>` : "";
+        div.innerHTML = `<div class="animal-icon">${info.icon}</div>${labelHtml}`;
+        animalLayer.appendChild(div);
+    }
+
+    function updateInstruction() {
+        instructionEl.innerHTML = steps[currentStep].text.replace(/\[MATH\](.*?)\[\/MATH\]/g, (m, p1) => katex.renderToString(p1, { throwOnError: false }));
+    }
+
+    const steps = [
+        {
+            text: "Step 1: 🐶, 🐱, 🐰, 🦁 が平行四辺形に<br>なるように、🦁 の場所をクリックしてね！",
+            init: () => { controlPanel.style.display = "none"; document.getElementById('stage').onclick = (e) => { const rect = e.currentTarget.getBoundingClientRect(); clickedPoint = fromPx(e.clientX - rect.left, e.clientY - rect.top); updateStage(); }; },
+            check: () => (clickedPoint && clickedPoint.x === config.D.x && clickedPoint.y === config.D.y) ? true : "おしい！座標のメモリをよく見て、平行になるところを探そう。"
+        },
+        {
+            text: "Step 2: 🐶 から 🐱 への移動（成分）を<br>( , ) の形で答えてね！",
+            init: () => { controlPanel.style.display = "flex"; mainInput.style.display = "block"; mainInput.value = ""; mainInput.focus(); },
+            check: () => mainInput.value.replace(/[\s\(\)]/g, '') === "3,1" ? true : "🐶(1,1) から 🐱(4,2) まで、xはいくつ、yはいくつ増えてるかな？"
+        },
+        {
+            text: "🐶 → 🐱 と同じ向き・同じ長さの<br>移動はどれかな？",
+            init: () => { mainInput.style.display = "none"; mathPreview.innerHTML = ""; const area = document.getElementById('choice-area'); area.style.display = "flex"; area.innerHTML = ""; const options = [{ lab: "🐱 \\to 🐰", id: "BC" }, { lab: "🐰 \\to 🦁", id: "CD" }, { lab: "🦁 \\to 🐰", id: "DC" }, { lab: "🐶 \\to 🦁", id: "AD" }]; options.forEach(opt => { const b = document.createElement('div'); b.className = "choice-card"; katex.render(opt.lab, b); b.onclick = () => { document.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected')); b.classList.add('selected'); window.selectedId = opt.id; feedbackEl.innerText = ""; }; area.appendChild(b); }); },
+            check: () => window.selectedId === "DC" ? true : "平行で向きが同じ矢印を探そう。🦁 から 🐰 へ向かう移動だよ。"
+        },
+        {
+            text: "🦁(x, y) から 🐰(2, 5) への移動を<br>( , ) の形で書いてみよう！",
+            init: () => { document.getElementById('choice-area').style.display = "none"; mainInput.style.display = "block"; mainInput.value = ""; mainInput.focus(); },
+            check: () => { const v = mainInput.value.replace(/\s+/g, '').toLowerCase(); return (v.includes("2-x") && v.includes("5-y")) ? true : "「ゴールの座標 － スタートの座標」で計算してみてね。" }
+        },
+        {
+            text: "Step 2 と Step 4 は同じ移動だね！<br>この関係を利用して 🦁 の座標を求めよう！",
+            init: () => { 
+                memoEl.style.display = "block";
+                memoContent.innerHTML = `Step 2: <span id="m1"></span><br>Step 4: <span id="m2"></span>`;
+                katex.render("\\vec{AB} = (3, 1)", document.getElementById('m1'));
+                katex.render("\\vec{DC} = (2-x, 5-y)", document.getElementById('m2'));
+                mainInput.value = ""; mainInput.focus(); 
+            },
+            check: () => mainInput.value.replace(/[\s\(\)]/g, '') === "-1,4" ? true : "2-x = 3 と 5-y = 1 を解くと、x と y は何になるかな？"
+        }
+    ];
+
+    function handleAction() {
+        if (isTransitioning) return;
+        const res = steps[currentStep].check();
+        if(res === true) {
+            isTransitioning = true;
+            actionBtn.disabled = true;
+            if(currentStep === 4) solved = true;
+            updateStage();
+            feedbackEl.innerText = "すごーい！せいかい！ 🌟"; 
+            feedbackEl.style.color = "#10b981";
+            const bubbles = document.querySelectorAll('.step-bubble');
+            bubbles[currentStep].classList.add('completed');
+            bubbles[currentStep].classList.remove('active');
+            currentStep++;
+            if(currentStep < steps.length) {
+                setTimeout(() => {
+                    bubbles[currentStep].classList.add('active');
+                    steps[currentStep].init();
+                    mainInput.value = ""; mathPreview.innerHTML = ""; feedbackEl.innerText = "";
+                    updateInstruction(); updateStage();
+                    isTransitioning = false; actionBtn.disabled = false;
+                }, 800);
+            } else {
+                actionBtn.style.display = "none";
+                setTimeout(() => { 
+                    document.getElementById('mission-view').style.display = "none"; 
+                    document.getElementById('finish-screen').style.display = "block"; 
+                }, 1000);
+            }
+        } else {
+            feedbackEl.innerText = res; feedbackEl.style.color = "#fb7185";
+        }
+    }
+
+    mainInput.addEventListener('input', () => {
+        let val = mainInput.value.replace(/[Ａ-Ｚａ-ｚ０-９＋－（），]/g, s => String.fromCharCode(s.charCodeAt(0)-0xFEE0));
+        if(val.length > 0) { katex.render(val, mathPreview, { throwOnError: false }); } 
+        else { mathPreview.innerHTML = ""; }
+    });
+
+    mainInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAction(); });
+
+    window.onload = () => { updateStage(); updateInstruction(); steps[0].init(); };
+</script>
+</body>
+</html>
