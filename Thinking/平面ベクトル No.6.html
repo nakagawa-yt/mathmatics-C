@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内積航海！追い風クエスト</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --sea-blue: #00bcd4; --deep-sea: #00838f; --gold: #ffc107;
+            --coral: #ff5252; --shell: #f1f8e9; --wood: #5d4037;
+        }
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', sans-serif;
+            background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+            margin: 0; display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; touch-action: none;
+        }
+        .app-container {
+            background: var(--shell); width: 95vw; max-width: 900px; height: 95vh; max-height: 720px;
+            padding: 25px; border-radius: 30px; border: 8px solid var(--sea-blue);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            position: relative; box-shadow: 0 20px 0 rgba(0,0,0,0.3);
+        }
+        .step-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .step-node { width: 40px; height: 12px; background: #cfd8dc; border-radius: 10px; transition: 0.3s; }
+        .step-node.active { background: var(--gold); width: 60px; box-shadow: 0 0 10px var(--gold); }
+        .step-node.done { background: var(--sea-blue); }
+
+        .chat-box {
+            background: white; border: 4px solid var(--sea-blue); border-radius: 20px;
+            padding: 15px 25px; margin-bottom: 15px; min-height: 100px;
+            position: relative; font-size: 1.1rem; line-height: 1.5; color: #37474f;
+        }
+
+        .main-content { display: flex; flex: 1; gap: 20px; min-height: 0; }
+        #stage {
+            flex: 1.5; position: relative; background: #e0f7fa;
+            border: 4px solid var(--sea-blue); border-radius: 25px; overflow: hidden;
+        }
+        canvas { position: absolute; width: 100%; height: 100%; }
+
+        .control-panel { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .choice-btn {
+            background: white; border: 3px solid var(--sea-blue); padding: 14px;
+            border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 1.1rem;
+            transition: all 0.2s; color: var(--deep-sea);
+        }
+        .choice-btn.selected { background: var(--gold); color: var(--wood); border-color: var(--wood); transform: scale(1.05); }
+
+        .rank-box { display: flex; justify-content: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+        .num-circle {
+            width: 45px; height: 45px; background: white; border: 3px solid var(--sea-blue);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.2s;
+        }
+        .num-circle.selected { background: var(--coral); color: white; border-color: var(--wood); transform: scale(1.1); }
+
+        .btn-submit {
+            background: var(--coral); color: white; padding: 18px; border: none;
+            border-radius: 20px; font-size: 1.4rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 6px 0 #b71c1c; margin-top: auto;
+        }
+        .btn-submit:disabled { background: #ccc; box-shadow: none; cursor: default; }
+
+        #feedback { font-size: 1.4rem; text-align: center; height: 1.4em; font-weight: bold; }
+
+        #clear-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,188,212,0.98); z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 22px; color: white; text-align: center; padding: 20px; box-sizing: border-box;
+        }
+        .form-container { width: 100%; flex: 1; background: white; border-radius: 15px; margin-top: 20px; overflow: hidden; }
+
+        input[type="number"] { font-size: 2.5rem; width: 150px; text-align: center; border: 4px solid var(--sea-blue); border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="step-bar" id="step-bar">
+        <div class="step-node active"></div><div class="step-node"></div><div class="step-node"></div><div class="step-node"></div><div class="step-node"></div>
+    </div>
+
+    <div class="chat-box" id="msg"></div>
+
+    <div class="main-content">
+        <div id="stage"><canvas id="canvas"></canvas></div>
+
+        <div class="control-panel">
+            <div id="q2-panel" style="display:none;">
+                <p style="text-align:center; font-weight:bold; color:var(--deep-sea); margin:0; font-size:0.9rem;">
+                    船が進む方向への力が【大きい順】に並べよう！<br><small>（タップで選択、もう一度押すと解除）</small>
+                </p>
+                <div class="rank-box" id="num-btns"></div>
+                <div id="rank-display" style="text-align:center; font-weight:bold; color:var(--coral); font-size:1.1rem; min-height:1.2em; margin-top:5px;">順序：?</div>
+            </div>
+            <div id="choice-area" class="control-panel"></div>
+            <div id="math-area" style="display:none; text-align:center;"><input type="number" id="math-ans"></div>
+            <div id="feedback"></div>
+            <button class="btn-submit" id="submit-btn" onclick="onCheck()">決定！</button>
+        </div>
+    </div>
+
+    <div id="clear-screen">
+        <h2>💰 TREASURE CLEAR!! 💰</h2>
+        <div class="form-container">
+            <iframe src="https://forms.gle/cYiWjeLoEs4v7b998" width="100%" height="100%" frameborder="0">読み込んでいます…</iframe>
+        </div>
+        <button class="btn-submit" style="width:240px; margin-top:15px;" onclick="location.reload()">冒険をやり直す</button>
+    </div>
+</div>
+
+<script>
+    let quest = 1, sub = 0, selected = null, q2_rank = [], isProcessing = false;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let isDragging = false;
+    let dragVecB = { x: 90, y: -60 };
+    let heroPos = { x: 130, y: 0 }; 
+
+    const questData = {
+        1: {
+            title: "Q1: 向きをチェック！",
+            steps: [
+                { text: "船は宝の方へ進む。赤の「右向きの風」はどうかな？", b: {x:80, y:0}, ans: 0 },
+                { text: "じゃあ、この「真下からの風」はどうかな？", b: {x:0, y:-80}, ans: 1 }
+            ],
+            choices: ["追い風！", "意味がない！", "向かい風！"]
+        },
+        2: {
+            title: "Q2: どの風が一番味方？",
+            text: "風の強さだけでなく「向き」も重要だ。宝の方へ進める力が<strong>大きい順</strong>に番号を選んで！",
+            ans: "1,2,4,3,5" 
+        },
+        3: {
+            title: "Q3: 角度 $\\theta$ と「影」",
+            text: "風の力の先端を<strong>ドラッグ</strong>しよう。<br>宝の方への「青い影」の長さは、どの式で表せるかな？",
+            choices: ["$|\\vec{b}|$", "$|\\vec{b}|\\sin\\theta$", "$|\\vec{b}|\\cos\\theta$"],
+            ans: 2
+        },
+        4: {
+            title: "Q4: どっちの影響がデカい？",
+            text: "どちらの風の方が船への影響（影の長さ）が大きいかな？",
+            choices: ["場面 A", "場面 B", "どちらも同じ"],
+            ans: 1 
+        },
+        5: {
+            title: "Q5: ラスト計算！",
+            text: "$|a|=5, |b|=2\\sqrt{3}, \\theta=30^\\circ$ のとき，船の進む力を求めよ！<br><small>船の進む力 = $船の動く力 \\times$ (追い風の影の長さ)</small>",
+            ans: 15
+        }
+    };
+
+    function init() {
+        const rect = canvas.parentNode.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+        heroPos.y = canvas.height / 2;
+        const stage = document.getElementById('stage');
+        stage.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('mouseup', endDrag);
+        stage.addEventListener('touchstart', (e) => { startDrag(e.touches[0]); e.preventDefault(); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { drag(e.touches[0]); e.preventDefault(); }, {passive: false});
+        window.addEventListener('touchend', endDrag);
+        renderQuest();
+    }
+
+    function startDrag(e) {
+        if (quest !== 3 || isProcessing) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        if (Math.hypot(mx - (heroPos.x + dragVecB.x), my - (heroPos.y + 20 + dragVecB.y)) < 60) isDragging = true;
+    }
+    function drag(e) {
+        if (!isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        dragVecB.x = (e.clientX - rect.left) - heroPos.x;
+        dragVecB.y = (e.clientY - rect.top) - (heroPos.y + 20);
+        draw();
+    }
+    function endDrag() { isDragging = false; }
+
+    function renderQuest() {
+        isProcessing = false;
+        selected = null;
+        document.getElementById('submit-btn').disabled = false;
+        
+        const q = questData[quest];
+        const step = q.steps ? q.steps[sub] : q;
+        document.getElementById('msg').innerHTML = `<strong>${q.title}</strong><br>${step.text}`;
+        renderMathInElement(document.getElementById('msg'), {delimiters:[{left:"$",right:"$",display:false}]});
+
+        document.getElementById('choice-area').style.display = (q.choices && quest !== 2) ? 'flex' : 'none';
+        document.getElementById('q2-panel').style.display = (quest === 2) ? 'block' : 'none';
+        document.getElementById('math-area').style.display = (quest === 5) ? 'block' : 'none';
+
+        if (q.choices && quest !== 2) {
+            const area = document.getElementById('choice-area'); area.innerHTML = "";
+            q.choices.forEach((t, i) => {
+                const btn = document.createElement('button'); btn.className = "choice-btn"; btn.innerHTML = t;
+                btn.onclick = () => { document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); selected = i; };
+                area.appendChild(btn);
+                renderMathInElement(btn, {delimiters:[{left:"$",right:"$",display:false}]});
+            });
+        }
+        if (quest === 2) {
+            const btns = document.getElementById('num-btns'); btns.innerHTML = "";
+            [1,2,3,4,5].forEach(n => {
+                const div = document.createElement('div'); div.className = "num-circle"; div.innerText = n;
+                div.onclick = () => {
+                    const idx = q2_rank.indexOf(n);
+                    if (idx > -1) { q2_rank.splice(idx, 1); div.classList.remove('selected'); }
+                    else if (q2_rank.length < 5) { q2_rank.push(n); div.classList.add('selected'); }
+                    document.getElementById('rank-display').innerText = q2_rank.length ? "順序：" + q2_rank.join(' > ') : "順序：?";
+                };
+                btns.appendChild(div);
+            });
+        }
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "#b2ebf2"; ctx.fillRect(0, heroPos.y + 15, canvas.width, 300);
+
+        if (quest === 4) {
+            drawScene(0, canvas.height/4, "場面 A: |b|=4, 60°", {x:40, y:-69});
+            drawScene(canvas.height/2, canvas.height*3/4, "場面 B: |b|=2√3, 30°", {x:75, y:-43});
+        } else {
+            let v = (questData[quest].steps?.[sub].b || dragVecB);
+            drawScene(0, canvas.height/2, "", (quest === 2 ? null : v));
+        }
+    }
+
+    function drawScene(top, centerY, label, wind) {
+        const bx = heroPos.x, by = centerY + 20;
+        ctx.fillStyle = "#007c91"; ctx.font = "bold 16px sans-serif"; ctx.fillText(label, 15, top + 25);
+        
+        ctx.font = "70px serif"; 
+        ctx.fillText("⛵", bx-40, by+15); 
+        ctx.fillText("💰", bx + 220, by+15);
+        
+        drawArrow(bx, by, 250, 0, "rgba(0,0,0,0.1)", true);
+
+        if (quest === 2) {
+            // 配置を固定。 1(右), 2(斜め右), 3(短・斜め右), 4(長め・少し上寄り), 5(左)
+            // 4の角度を 70 -> 65へ調整。
+            const cfgs = [
+                {a:0, l:120},   // 1: P=120
+                {a:25, l:110},  // 2: P=99.7
+                {a:45, l:35},   // 3: P=24.7
+                {a:65, l:100},  // 4: P=42.2 (角度は急だが長さで3に勝つ)
+                {a:150, l:90}   // 5: P=-77.9
+            ];
+            cfgs.forEach((c, i) => {
+                const r = c.a * Math.PI / 180;
+                drawArrow(bx, by, c.l * Math.cos(r), -c.l * Math.sin(r), "#f44336", false, i+1);
+            });
+        } else if (wind) {
+            drawArrow(bx, by, wind.x, wind.y, "#f44336", false, "b");
+            if (quest >= 3) {
+                ctx.setLineDash([4,4]); ctx.strokeStyle = "#1976d2";
+                ctx.beginPath(); ctx.moveTo(bx + wind.x, by + wind.y); ctx.lineTo(bx + wind.x, by); ctx.stroke();
+                ctx.setLineDash([]); ctx.lineWidth = 8; ctx.strokeStyle = "rgba(2, 136, 209, 0.6)";
+                ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + wind.x, by); ctx.stroke();
+                
+                const ang = Math.atan2(wind.y, wind.x);
+                ctx.beginPath(); ctx.arc(bx, by, 45, 0, ang, wind.y < 0);
+                ctx.strokeStyle = "#ff5722"; ctx.lineWidth = 3; ctx.stroke();
+                ctx.fillStyle = "#ff5722"; ctx.font = "bold 24px serif"; 
+                ctx.fillText("θ", bx + 55, by - 15);
+            }
+        }
+    }
+
+    function drawArrow(x, y, dx, dy, color, dash, label) {
+        ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 5;
+        if (dash) ctx.setLineDash([5,5]); else ctx.setLineDash([]);
+        ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+        const a = Math.atan2(dy, dx); ctx.fillStyle = color; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x+dx, y+dy);
+        ctx.lineTo(x+dx-20*Math.cos(a-0.5), y+dy-20*Math.sin(a-0.5));
+        ctx.lineTo(x+dx-20*Math.cos(a+0.5), y+dy-20*Math.sin(a+0.5)); ctx.fill();
+        if(label) { ctx.fillStyle = "black"; ctx.font = "bold 26px sans-serif"; ctx.fillText(label, x+dx+12, y+dy+8); }
+    }
+
+    function onCheck() {
+        if (isProcessing) return;
+        const q = questData[quest];
+        const step = q.steps ? q.steps[sub] : q;
+        let correct = false;
+        
+        if (quest === 2) {
+            correct = q2_rank.join(',') === q.ans;
+        } else if (quest === 5) {
+            const val = document.getElementById('math-ans').value;
+            if (val === "") { alert("答えを入力してね！"); return; }
+            correct = val == q.ans;
+        } else {
+            if (selected === null) { alert("選んでね！"); return; }
+            correct = selected === step.ans;
+        }
+
+        const fb = document.getElementById('feedback');
+        if (correct) {
+            isProcessing = true;
+            document.getElementById('submit-btn').disabled = true;
+            fb.innerHTML = "✨ NICE!正解！ ✨"; fb.style.color = "#4caf50";
+            setTimeout(() => {
+                fb.innerHTML = "";
+                if (q.steps && sub < q.steps.length - 1) { sub++; renderQuest(); } 
+                else { nextQuest(); }
+            }, 1200);
+        } else {
+            fb.innerHTML = "おっと！向きをよく見よう"; fb.style.color = "#f44336";
+            if(quest === 2) { 
+                q2_rank = []; 
+                document.getElementById('rank-display').innerText = "順序：?";
+                document.querySelectorAll('.num-circle').forEach(c => c.classList.remove('selected'));
+            }
+        }
+    }
+
+    function nextQuest() {
+        if (quest < 5) {
+            document.querySelectorAll('.step-node')[quest-1].className = "step-node done";
+            quest++; sub = 0; q2_rank = []; selected = null;
+            document.querySelectorAll('.step-node')[quest-1].className = "step-node active";
+            document.getElementById('math-ans').value = "";
+            renderQuest();
+        } else {
+            document.getElementById('clear-screen').style.display = 'flex';
+        }
+    }
+    window.onload = init;
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</body>
+</html>
