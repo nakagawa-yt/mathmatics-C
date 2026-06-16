@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VECTOR RADAR：ドローンの円飛行を支配せよ</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.75);
+            --text-light: #f8fafc;
+            --neon-blue: #38bdf8;
+            --neon-cyan: #00f5d4;
+            --neon-magenta: #f43f5e;
+            --border-glow: rgba(0, 245, 212, 0.3);
+        }
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Yu Gothic', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, var(--bg-dark) 100%);
+            margin: 0; display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; color: var(--text-light);
+        }
+        .app-container {
+            background: var(--panel-bg); width: 95vw; max-width: 1150px; height: 85vh; max-height: 760px;
+            padding: 25px; border-radius: 24px; box-shadow: 0 0 30px rgba(0, 245, 212, 0.1);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            position: relative; border: 2px solid rgba(56, 189, 248, 0.2);
+            backdrop-filter: blur(12px);
+        }
+        
+        /* エネルギーゲージ風のステップバー */
+        .step-bar { display: flex; justify-content: center; gap: 12px; margin-bottom: 15px; }
+        .step-node { width: 55px; height: 8px; background: #334155; border-radius: 4px; transition: 0.4s; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .step-node.active { background: var(--neon-cyan); width: 85px; box-shadow: 0 0 10px var(--neon-cyan); }
+        .step-node.done { background: var(--neon-blue); box-shadow: 0 0 6px var(--neon-blue); }
+
+        /* ホログラム風メッセージボックス */
+        .chat-box {
+            background: rgba(15, 23, 42, 0.6); border-left: 6px solid var(--neon-cyan); border-radius: 4px 16px 16px 4px;
+            padding: 14px 20px; margin-bottom: 15px; min-height: 65px;
+            font-size: 1.05rem; line-height: 1.6; color: #e2e8f0;
+            border-top: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .main-content { display: flex; flex: 1; gap: 25px; min-height: 0; }
+        
+        /* コックピットモニター風のステージ */
+        #stage {
+            flex: 1.2; position: relative; background: #0b0f19;
+            border: 2px solid var(--neon-blue); border-radius: 20px; overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.2), 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+        canvas { position: absolute; width: 100%; height: 100%; }
+
+        .control-panel { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; justify-content: flex-start; }
+        
+        /* インプットエリア */
+        .input-container {
+            display: flex; flex-direction: column; gap: 15px; background: rgba(15, 23, 42, 0.8);
+            padding: 22px; border-radius: 16px; border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 245, 212, 0.1);
+        }
+        .input-label { font-size: 1.05rem; font-weight: bold; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1px; }
+        
+        .vector-input-wrapper { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; box-sizing: border-box; }
+        .vector-bracket { font-size: 2.2rem; font-weight: bold; color: var(--neon-cyan); user-select: none; text-shadow: 0 0 8px var(--neon-cyan); }
+        
+        .text-answer-field {
+            padding: 12px; font-size: 1.4rem; border-radius: 12px;
+            border: 2px solid #475569; color: #fff; text-align: center;
+            font-family: 'Courier New', Courier, monospace; font-weight: bold; box-sizing: border-box;
+            background: #1e293b; transition: all 0.2s; letter-spacing: 1px; width: 100%;
+        }
+        .text-answer-field:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0, 245, 212, 0.5); }
+
+        .mission0-inputs { display: flex; gap: 15px; width: 100%; }
+        .mission0-subfield { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        .mission0-subfield span { font-size: 0.85rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; }
+
+        /* デジタルキーボード（4問目のみ使用） */
+        .math-keyboard { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+        .math-key {
+            flex: 1; background: #1e293b; border: 2px solid #475569; padding: 12px;
+            border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.3rem;
+            transition: all 0.1s ease; color: var(--neon-cyan); text-align: center;
+            box-shadow: 0 3px 0 #0f172a; box-sizing: border-box;
+        }
+        .math-key:hover { border-color: var(--neon-cyan); background: #334155; box-shadow: 0 0 8px rgba(0,245,212,0.3); }
+        .math-key:active { transform: translateY(2px); box-shadow: 0 1px 0 #0f172a; }
+
+        /* 選択肢ボタン（3問目用） */
+        .choice-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0; }
+        .choice-btn {
+            background: #1e293b; border: 2px solid #475569; padding: 12px 18px;
+            border-radius: 14px; cursor: pointer; font-weight: bold; font-size: 1.15rem;
+            transition: all 0.2s ease; color: var(--text-light); text-align: left;
+            display: flex; align-items: center; min-height: 52px; box-shadow: 0 3px 0 #0f172a;
+            box-sizing: border-box;
+        }
+        .choice-btn:hover { border-color: var(--neon-blue); background: #334155; box-shadow: 0 0 10px rgba(56,189,248,0.2); }
+        .choice-btn.selected { border-color: var(--neon-cyan); background: rgba(0,245,212,0.1); color: var(--neon-cyan); box-shadow: 0 1px 0 #0f172a; transform: translateY(2px); text-shadow: 0 0 5px rgba(0,245,212,0.5); }
+
+        /* システム送信ボタン */
+        .btn-submit {
+            background: var(--neon-magenta); color: white; padding: 14px; border: none;
+            border-radius: 16px; font-size: 1.25rem; font-weight: bold; cursor: pointer;
+            margin-top: auto; transition: all 0.2s, transform 0.1s;
+            box-shadow: 0 4px 0 #9f1239, 0 0 15px rgba(244,63,94,0.3); flex-shrink: 0;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .btn-submit:hover { background: #e11d48; box-shadow: 0 0 20px rgba(244,63,94,0.6); }
+        .btn-submit:active { transform: translateY(3px); box-shadow: 0 1px 0 #9f1239; }
+        .btn-submit:disabled { background: #334155; color: #64748b; box-shadow: none; cursor: default; transform: none; }
+
+        #feedback { font-size: 1.25rem; text-align: center; height: 1.3em; font-weight: bold; flex-shrink: 0; margin-top: 2px; text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+
+        /* ミッションクリア画面 */
+        #clear-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark); z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 20px; padding: 30px; box-sizing: border-box;
+        }
+        .form-container { width: 100%; flex: 1; background: #1e293b; border-radius: 16px; border: 2px solid var(--neon-blue); overflow: hidden; box-shadow: 0 0 20px rgba(56,189,248,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="step-bar" id="step-bar">
+        <div class="step-node active"></div><div class="step-node"></div><div class="step-node"></div><div class="step-node"></div><div class="step-node"></div>
+    </div>
+
+    <div class="chat-box" id="msg"></div>
+
+    <div class="main-content">
+        <div id="stage"><canvas id="canvas"></canvas></div>
+
+        <div class="control-panel">
+            <div id="input-area"></div>
+            <div id="feedback"></div>
+            <button class="btn-submit" id="submit-btn" onclick="onCheck()">SYSTEM CHECK</button>
+        </div>
+    </div>
+
+    <div id="clear-screen">
+        <h2 style="margin: 0 0 15px 0; color: var(--neon-cyan); font-size: 2rem; text-shadow: 0 0 15px var(--neon-cyan); letter-spacing: 1px;">🛸 MISSION ACCOMPLISHED!! 🛸</h2>
+        <p style="margin: 0 0 20px 0; color: var(--neon-blue); font-weight: bold;">円のベクトル方程式の完全掌握に成功しました。</p>
+        <div class="form-container">
+            <iframe src="https://forms.gle/cSdcM6kYndfpuJLSA" width="100%" height="100%" frameborder="0">Loading...</iframe>
+        </div>
+        <button class="btn-submit" style="width:260px; margin-top:20px;" onclick="location.reload()">REBOOT SYSTEM</button>
+    </div>
+</div>
+
+<script>
+    let quest = 0, selected = null, isProcessing = false;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const questData = {
+        0: {
+            type: "custom-input",
+            title: "🛸 MISSION 00: 別セクターの方程式スキャン（復習）",
+            text: "まずは、別セクターを飛行するドローンの方程式 $(x-2)^2 + (y+3)^2 = 16$ から、既存の知識（図形と方程式）を呼び起こせ！<br>この円の**中心の座標**と**半径**を入力せよ！",
+            ansCenter: ["(2,-3)", "2,-3"],
+            ansRadius: ["4"]
+        },
+        1: {
+            type: "input",
+            title: "🛸 MISSION 01: 本機ドローンの現在位置を捕捉せよ",
+            text: "よし、本番だ！我が隊の偵察ドローン $P$ が上空を高速飛行中である。原点 $O$（司令部）を基準とした現在の正確な座標を<br>左側のグリーンレーダーの目盛りから直接読み取り**、位置ベクトル $\\vec{OP}$ の成分を入力せよ！",
+            placeholder: "例：(3, 5) や 3, 5 など", 
+            ans: ["(1,2)", "1,2"]
+        },
+        2: {
+            type: "input",
+            title: "📡 MISSION 02: 巡回ルートの相対ベクトル解析",
+            text: "このドローンは、通信タワー $C(1, -1)$ を中心とする円形シールドに沿って旋回モードに入った。円上の任意のターゲット動点を<br>$P(x, y)$ とするとき、中心 $C$ からドローン $P$ へ向かうロックオン・ベクトル $\\vec{CP}$ の成分を計算して入力せよ！",
+            placeholder: "例：(x-3, y-5) などの式を入力", 
+            ans: ["(x-1,y+1)", "x-1,y+1"]
+        },
+        3: {
+            type: "choice",
+            title: "⚡ MISSION 03: 防衛シールドの幾何学同期",
+            text: "ドローンは中心からの距離が常に $3$ の軌道（すなわち $|\\vec{CP}| = 3$）をキープしている。この条件式の両辺を2乗し、ステップ2の<br>成分を代入して、おなじみの「円の方程式（展開形）」へとエネルギーを結合せよ！",
+            choices: ["(x-1)^2 + (y+1)^2 = 9", "(x-1)^2 + (y+1)^2 = 3", "(x+1)^2 + (y-1)^2 = 9", "(x-1) + (y+1) = 9"],
+            ans: 0
+        },
+        4: {
+            type: "input",
+            title: "👑 FINAL MISSION: 円のマスターベクトル方程式を生成せよ",
+            text: "いよいよ最終試練だ。中心 $C$ の位置ベクトルを $\\vec{a}$、ドローン $P$ の位置ベクトルを $\\vec{p}$、半径を $r$ とする。「中心からの距離が常に<br>半径に等しい」という不変の幾何学ルールを、ベクトル方程式で表せ。$|\\quad| = r$ の空欄を満たすコードを入力せよ！",
+            placeholder: "ベクトル式",
+            keys: ['p', 'a', '+', '-'],
+            ans: ["p-a", "a-p"]
+        }
+    };
+
+    function init() {
+        renderQuest();
+    }
+
+    function renderQuest() {
+        isProcessing = false;
+        selected = null;
+        document.getElementById('submit-btn').disabled = false;
+        
+        const q = questData[quest];
+        document.getElementById('msg').innerHTML = `<strong>${q.title}</strong><br>${q.text}`;
+        renderMathInElement(document.getElementById('msg'), {delimiters:[{left:"$",right:"$",display:false}]});
+
+        const area = document.getElementById('input-area');
+        area.innerHTML = "";
+
+        const stage = document.getElementById('stage');
+        const rect = stage.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (q.type === "custom-input") {
+            // 0問目専用の2箇所入力フィールド
+            const container = document.createElement('div');
+            container.className = "input-container";
+            
+            const label = document.createElement('div');
+            label.className = "input-label";
+            label.innerText = "DECRYPT RECOVERY CODE :";
+
+            const fieldsDiv = document.createElement('div');
+            fieldsDiv.className = "mission0-inputs";
+
+            const centerDiv = document.createElement('div');
+            centerDiv.className = "mission0-subfield";
+            centerDiv.innerHTML = "<span>中心の座標</span>";
+            const inputCenter = document.createElement('input');
+            inputCenter.type = "text"; inputCenter.id = "ans-center"; inputCenter.className = "text-answer-field";
+            inputCenter.placeholder = "例: (3, -5)";
+            centerDiv.appendChild(inputCenter);
+
+            const radiusDiv = document.createElement('div');
+            radiusDiv.className = "mission0-subfield";
+            radiusDiv.innerHTML = "<span>半径</span>";
+            const inputRadius = document.createElement('input');
+            inputRadius.type = "text"; inputRadius.id = "ans-radius"; inputRadius.className = "text-answer-field";
+            inputRadius.placeholder = "例: 5";
+            radiusDiv.appendChild(inputRadius);
+
+            fieldsDiv.appendChild(centerDiv);
+            fieldsDiv.appendChild(radiusDiv);
+            container.appendChild(label);
+            container.appendChild(fieldsDiv);
+            area.appendChild(container);
+
+            inputCenter.onkeydown = (e) => { if(e.key === 'Enter') inputRadius.focus(); };
+            inputRadius.onkeydown = (e) => { if(e.key === 'Enter') onCheck(); };
+            setTimeout(() => inputCenter.focus(), 200);
+
+        } else if (q.type === "input") {
+            const inputContainer = document.createElement('div');
+            inputContainer.className = "input-container";
+            
+            const label = document.createElement('div');
+            label.className = "input-label";
+            label.innerText = (quest === 4) ? "INPUT VECTOR CODE :" : "INPUT TELEMETRY DATA :";
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = "vector-input-wrapper";
+            
+            const input = document.createElement('input');
+            input.type = "text";
+            input.id = "answer-input";
+            input.className = "text-answer-field";
+            input.placeholder = q.placeholder;
+            input.onkeydown = (e) => { if(e.key === 'Enter') onCheck(); };
+
+            if (quest === 4) {
+                input.style.width = "160px";
+                const leftBracket = document.createElement('span');
+                leftBracket.className = "vector-bracket";
+                leftBracket.innerText = "|";
+                const rightBracket = document.createElement('span');
+                rightBracket.className = "vector-bracket";
+                rightBracket.innerText = "| = r";
+                
+                wrapper.appendChild(leftBracket);
+                wrapper.appendChild(input);
+                wrapper.appendChild(rightBracket);
+            } else {
+                wrapper.appendChild(input);
+            }
+            
+            inputContainer.appendChild(label);
+            inputContainer.appendChild(wrapper);
+
+            if (quest === 4 && q.keys) {
+                const keyboard = document.createElement('div');
+                keyboard.className = "math-keyboard";
+                q.keys.forEach(key => {
+                    const btn = document.createElement('button');
+                    btn.className = "math-key";
+                    btn.type = "button";
+                    btn.innerText = key;
+                    btn.onclick = () => {
+                        input.value += key;
+                        input.focus();
+                    };
+                    keyboard.appendChild(btn);
+                });
+                inputContainer.appendChild(keyboard);
+            }
+
+            area.appendChild(inputContainer);
+            setTimeout(() => input.focus(), 200);
+            
+        } else {
+            const list = document.createElement('div');
+            list.className = "choice-list";
+            q.choices.forEach((formula, i) => {
+                const btn = document.createElement('button'); btn.className = "choice-btn";
+                const mathSpan = document.createElement('span');
+                btn.appendChild(mathSpan);
+                list.appendChild(btn);
+                
+                katex.render(formula, mathSpan); 
+                
+                btn.onclick = () => { 
+                    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected')); 
+                    btn.classList.add('selected'); 
+                    selected = i; 
+                };
+            });
+            area.appendChild(list);
+        }
+
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const W = canvas.width, H = canvas.height;
+
+        if (quest === 4) {
+            ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+            ctx.strokeStyle = varToString('--neon-blue');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(20, 20, W - 40, H - 40, 20);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = varToString('--neon-cyan');
+            ctx.font = "bold 22px 'Courier New', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("⚡ FINAL VECTOR DECRYPTION ⚡", W / 2, H * 0.16);
+
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "bold 15px sans-serif";
+            const lines = [
+                "🚀 SEQUENCE 01: ドローン P の位置 ───＞ 位置ベクトル p",
+                "🛰️ SEQUENCE 02: 円の中心 C の位置 ───＞ 位置ベクトル a",
+                "📐 SEQUENCE 03: 中心からドローンへの相対ベクトル ─＞ [  ?  ]",
+                "👑 SYSTEM GOAL: 「中心からの距離が ──＞ 常に半径 r に等しい」"
+            ];
+            lines.forEach((line, idx) => {
+                if(idx === 3) ctx.fillStyle = varToString('--neon-cyan');
+                ctx.fillText(line, W / 2, H * 0.38 + idx * (H * 0.14));
+            });
+            ctx.textAlign = "left";
+            return;
+        }
+
+        const scale = 45;
+        const origin = { x: W * 0.45, y: H * 0.52 };
+
+        // 1. レーダー風グリッド
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.08)";
+        ctx.lineWidth = 1;
+        for (let x = origin.x % scale; x < W; x += scale) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+        }
+        for (let y = origin.y % scale; y < H; y += scale) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.04)";
+        for(let r=scale; r<Math.max(W,H); r+=scale) {
+            ctx.beginPath(); ctx.arc(origin.x, origin.y, r, 0, Math.PI*2); ctx.stroke();
+        }
+
+        // 2. メイン座標軸
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 4; ctx.shadowColor = varToString('--neon-blue');
+        ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(W, origin.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, H); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = varToString('--neon-blue');
+        ctx.font = "italic bold 16px 'Courier New', sans-serif";
+        ctx.fillText("X-AXIS", W - 70, origin.y - 10);
+        ctx.fillText("Y-AXIS", origin.x + 12, 25);
+        ctx.font = "bold 15px sans-serif";
+        ctx.fillText("O", origin.x - 18, origin.y + 20);
+
+        ctx.strokeStyle = varToString('--neon-blue'); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(origin.x, origin.y, 6, 0, Math.PI*2); ctx.stroke();
+
+        // 目盛り数字
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "bold 12px 'Courier New', sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        for (let i = -5; i <= 5; i++) {
+            if (i === 0) continue;
+            const cx = origin.x + i * scale;
+            if (cx > 0 && cx < W) {
+                ctx.beginPath(); ctx.moveTo(cx, origin.y - 4); ctx.lineTo(cx, origin.y + 4); ctx.stroke();
+                ctx.fillText(i, cx, origin.y + 8);
+            }
+        }
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        for (let i = -5; i <= 5; i++) {
+            if (i === 0) continue;
+            const cy = origin.y - i * scale;
+            if (cy > 0 && cy < H) {
+                ctx.beginPath(); ctx.moveTo(origin.x - 4, cy); ctx.lineTo(origin.x + 4, cy); ctx.stroke();
+                ctx.fillText(i, origin.x - 10, cy);
+            }
+        }
+
+        const getPix = (gridX, gridY) => {
+            return { x: origin.x + gridX * scale, y: origin.y - gridY * scale };
+        };
+
+        // 0問目専用：(2, -3) 半径4の別円を描画（完全に独立したマトリクス空間）
+        if (quest === 0) {
+            const C0 = getPix(2, -3);
+            ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.arc(C0.x, C0.y, 4 * scale, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = varToString('--neon-magenta');
+            ctx.beginPath(); ctx.arc(C0.x, C0.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.font = "bold 12px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("VIRTUAL C(2, -3)", C0.x + 10, C0.y + 4);
+
+            ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+            ctx.font = "bold 20px 'Courier New', sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("TEST SECTOR 00", W * 0.45, H * 0.2);
+            return;
+        }
+
+        // 1〜3問目は本番用の円とドローンを描画
+        const P = getPix(1, 2);
+        const C = getPix(1, -1);
+
+        if (quest === 2 || quest === 3) {
+            ctx.strokeStyle = varToString('--neon-cyan');
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 8; ctx.shadowColor = varToString('--neon-cyan');
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.arc(C.x, C.y, 3 * scale, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
+
+            ctx.strokeStyle = varToString('--neon-magenta'); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(C.x, C.y, 5, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(C.x-12, C.y); ctx.lineTo(C.x+12, C.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(C.x, C.y-12); ctx.lineTo(C.x, C.y+12); ctx.stroke();
+            
+            ctx.fillStyle = varToString('--neon-magenta');
+            ctx.font = "bold 13px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("CENTER C(1, -1)", C.x + 15, C.y + 4);
+
+            drawArrow(C.x, C.y, P.x - C.x, P.y - C.y, varToString('--neon-cyan'), 4, "CP");
+            drawDrone(P.x, P.y, "DRONE P(x, y)");
+
+            if (quest === 3) {
+                ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(C.x, C.y); ctx.lineTo(P.x, C.y); ctx.lineTo(P.x, P.y); ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = "#94a3b8";
+                ctx.font = "bold 13px 'Courier New', sans-serif"; ctx.textAlign = "center";
+                ctx.fillText("x - 1", (C.x + P.x)/2, C.y + 16);
+                ctx.textAlign = "left";
+                ctx.fillText("y + 1", P.x + 10, (C.y + P.y)/2);
+            }
+        } 
+        else if (quest === 1) {
+            drawArrow(origin.x, origin.y, P.x - origin.x, P.y - origin.y, varToString('--neon-blue'), 4, "OP");
+            drawDrone(P.x, P.y, "TARGET P");
+        }
+    }
+
+    function drawDrone(px, py, name) {
+        ctx.fillStyle = varToString('--neon-cyan');
+        ctx.shadowBlur = 6; ctx.shadowColor = varToString('--neon-cyan');
+        ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(px-12, py-12); ctx.lineTo(px+12, py+12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px-12, py+12); ctx.lineTo(px+12, py-12); ctx.stroke();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 13px 'Courier New', sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(name, px + 16, py - 6);
+    }
+
+    function varToString(varName) {
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    function drawArrow(x, y, dx, dy, color, width, label) {
+        ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = width;
+        ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+        
+        const a = Math.atan2(dy, dx); 
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.moveTo(x+dx, y+dy);
+        ctx.lineTo(x+dx-14*Math.cos(a-0.4), y+dy-14*Math.sin(a-0.4));
+        ctx.lineTo(x+dx-14*Math.cos(a+0.4), y+dy-14*Math.sin(a+0.4)); ctx.fill();
+        
+        if(label) {
+            ctx.fillStyle = color;
+            ctx.font = "italic bold 15px sans-serif";
+            const midX = x + dx * 0.5;
+            const midY = y + dy * 0.5;
+            const nx = -Math.sin(a);
+            const ny = Math.cos(a);
+            
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(label, midX + nx * 22, midY + ny * 22);
+            ctx.font = "11px sans-serif";
+            ctx.fillText("→", midX + nx * 22, midY + ny * 22 - 12);
+            ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+        }
+    }
+
+    function cleanStr(s) {
+        return s.replace(/\s+/g, '')
+                .replace(/[－−―]/g, '-')
+                .replace(/[（]/g, '(')
+                .replace(/[）]/g, ')')
+                .replace(/[，、]/g, ',')
+                .toLowerCase();
+    }
+
+    function onCheck() {
+        if (isProcessing) return;
+        const q = questData[quest];
+        let correct = false;
+
+        if (q.type === "custom-input") {
+            const cInput = document.getElementById('ans-center').value;
+            const rInput = document.getElementById('ans-radius').value;
+            if (!cInput.trim() || !rInput.trim()) { alert("すべての欄にデータを入力してください！"); return; }
+            
+            const normC = cleanStr(cInput);
+            const normR = cleanStr(rInput);
+            
+            const okC = q.ansCenter.some(a => a === normC);
+            const okR = q.ansRadius.some(a => a === normR);
+            correct = (okC && okR);
+
+        } else if (q.type === "input") {
+            const userInput = document.getElementById('answer-input').value;
+            if (!userInput.trim()) { alert("データを入力してください！"); return; }
+            const normInp = cleanStr(userInput);
+            correct = q.ans.some(a => a === normInp);
+        } else {
+            if (selected === null) { alert("データを選択してください！"); return; }
+            correct = (selected === q.ans);
+        }
+
+        const fb = document.getElementById('feedback');
+        if (correct) {
+            isProcessing = true;
+            document.getElementById('submit-btn').disabled = true;
+            fb.innerHTML = "🟢 SYSTEM OK: 軌道データの同期に成功！"; fb.style.color = varToString('--neon-cyan');
+            setTimeout(() => {
+                fb.innerHTML = "";
+                nextQuest();
+            }, 1200);
+        } else {
+            fb.innerHTML = "🔴 ERROR: ベクトルデータが拒絶されました。"; fb.style.color = varToString('--neon-magenta');
+        }
+    }
+
+    function nextQuest() {
+        const nodes = document.querySelectorAll('.step-node');
+        if (quest < 4) {
+            nodes[quest].className = "step-node done";
+            quest++;
+            nodes[quest].className = "step-node active";
+            renderQuest();
+        } else {
+            nodes[quest].className = "step-node done";
+            document.getElementById('clear-screen').style.display = 'flex';
+        }
+    }
+    window.onload = init;
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</body>
+</html>
