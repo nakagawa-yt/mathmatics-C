@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お部屋づくり：インテリア数学</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #f7f4eb;          /* 温かみのあるカフェラテ風アイボリー */
+            --panel-bg: #ffffff;         /* クリーンな白 */
+            --text-main: #4a3b32;        /* 優しいココアブラウン */
+            --text-muted: #8c7b70;       /* ほっこりしたミルクティグレー */
+            --warm-orange: #e07a5f;      /* テラコッタ風の優しいオレンジ */
+            --soft-blue: #81b29a;        /* くすんだミントグリーン風のブルーグリーン */
+            --soft-yellow: #f2cc8f;      /* 柔らかな木漏れ日イエロー */
+            --error-pink: #e07a5f;       /* アラートも優しめのトーンに */
+            --border-line: #e6dfd3;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f4efe2 0%, var(--bg-base) 100%);
+            margin: 0; display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; color: var(--text-main);
+        }
+        
+        .app-container {
+            background: var(--panel-bg); width: 95vw; max-width: 1180px; height: 88vh; max-height: 780px;
+            padding: 30px; border-radius: 32px; box-shadow: 0 10px 40px rgba(74, 59, 50, 0.05);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            position: relative; border: 4px solid #fdfbf7;
+        }
+        
+        /* ほっこり進行バー */
+        .step-bar { display: flex; justify-content: center; gap: 14px; margin-bottom: 20px; }
+        .step-node { width: 60px; height: 10px; background: #ebdccb; border-radius: 6px; transition: 0.4s; }
+        .step-node.active { background: var(--warm-orange); width: 90px; box-shadow: 0 2px 8px rgba(224, 122, 95, 0.2); }
+        .step-node.done { background: var(--soft-blue); }
+
+        /* のんびりメッセージエリア */
+        .chat-box {
+            background: #faf8f5; border-left: 6px solid var(--soft-blue); border-radius: 16px;
+            padding: 18px 24px; margin-bottom: 20px; min-height: 70px;
+            font-size: 1.02rem; line-height: 1.8; color: var(--text-main);
+            border-top: 1px solid var(--border-line); border-right: 1px solid var(--border-line); border-bottom: 1px solid var(--border-line);
+        }
+
+        .main-content { display: flex; flex: 1; gap: 30px; min-height: 0; }
+        
+        /* お部屋のレイアウト画面 */
+        #stage {
+            flex: 1.3; position: relative; background: #fdfbf7;
+            border: 2px solid #ebdccb; border-radius: 24px; overflow: hidden;
+        }
+        canvas { position: absolute; width: 100%; height: 100%; }
+
+        .control-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; min-height: 0; justify-content: flex-start; }
+        
+        /* 入力インターフェース */
+        .input-container {
+            display: flex; flex-direction: column; gap: 16px; background: #faf8f5;
+            padding: 24px; border-radius: 20px; border: 1px solid #ebdccb;
+        }
+        .input-label { font-size: 0.95rem; font-weight: 700; color: var(--soft-blue); letter-spacing: 0.5px; }
+        
+        .multi-input-wrapper { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+        .input-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .input-prefix { font-size: 1.15rem; font-weight: 600; color: var(--text-main); width: 95px; text-align: right; }
+        
+        .text-answer-field {
+            padding: 12px; font-size: 1.35rem; border-radius: 14px;
+            border: 2px solid #ebdccb; color: var(--text-main); text-align: center;
+            font-weight: 700; box-sizing: border-box;
+            background: #ffffff; transition: all 0.25s; flex: 1;
+        }
+        .text-answer-field:focus { outline: none; border-color: var(--warm-orange); background: #fffcf9; box-shadow: 0 0 0 4px rgba(224, 122, 95, 0.1); }
+
+        /* のんびりボタン */
+        .btn-submit {
+            background: linear-gradient(135deg, var(--soft-blue) 0%, #6b9c84 100%);
+            color: white; padding: 16px; border: none;
+            border-radius: 18px; font-size: 1.2rem; font-weight: 700; cursor: pointer;
+            margin-top: auto; transition: all 0.2s, transform 0.1s;
+            box-shadow: 0 4px 14px rgba(129, 178, 154, 0.2); flex-shrink: 0;
+        }
+        .btn-submit:hover { filter: brightness(1.05); }
+        .btn-submit:active { transform: translateY(2px); }
+        .btn-submit:disabled { background: #ebdccb; color: #a69585; box-shadow: none; cursor: default; filter: none; }
+
+        #feedback { font-size: 1.15rem; text-align: center; height: 1.3em; font-weight: 700; flex-shrink: 0; }
+
+        /* のんびりクリア画面 ＆ 提出フォーム */
+        #clear-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #f4efe2 0%, #ebdccb 100%); z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: flex-start;
+            border-radius: 28px; padding: 25px 30px; box-sizing: border-box; overflow-y: auto;
+        }
+        .summary-card {
+            background: #ffffff; border: 2px solid #ebdccb;
+            padding: 18px 24px; border-radius: 20px; max-width: 760px; width: 100%; margin: 10px 0;
+            text-align: left; line-height: 1.7; font-size: 1.05rem;
+            box-shadow: 0 10px 25px rgba(74, 59, 50, 0.02); box-sizing: border-box;
+        }
+        
+        /* Googleフォーム埋め込みコンテナ */
+        .google-form-container {
+            width: 100%; max-width: 760px; background: #ffffff; border: 2px solid #ebdccb;
+            border-radius: 20px; padding: 10px; box-sizing: border-box;
+            box-shadow: 0 10px 25px rgba(74, 59, 50, 0.02); margin-bottom: 15px;
+            position: relative; overflow: hidden;
+        }
+        .google-form-container iframe {
+            border-radius: 12px; display: block; background: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="step-bar" id="step-bar">
+        <div class="step-node active"></div><div class="step-node"></div><div class="step-node"></div><div class="step-node"></div>
+    </div>
+
+    <div class="chat-box" id="msg"></div>
+
+    <div class="main-content">
+        <div id="stage"><canvas id="canvas"></canvas></div>
+
+        <div class="control-panel">
+            <div id="input-area"></div>
+            <div id="feedback"></div>
+            <button class="btn-submit" id="submit-btn" onclick="onCheck()">レイアウトを決定する</button>
+        </div>
+    </div>
+
+    <div id="clear-screen">
+        <h2 style="margin: 5px 0 0 0; color: var(--warm-orange); font-size: 2rem; font-weight: 800;">🍃 すてきなお部屋の完成です</h2>
+        
+        <div class="summary-card">
+            <strong style="color: var(--warm-orange); font-size: 1.15rem; border-bottom: 3px solid var(--warm-orange); padding-bottom: 2px; display: inline-block; margin-bottom: 10px;">📌 お部屋づくりと空間ベクトル</strong><br>
+            真上から見た平面の設計図だけでは、重なって配置できなかった小物たちも、「高さ」を管理する<br>第3の要素 「z 成分」 を加えることで、ロフトや棚の上にきれいに並べられるようになりました。<br>
+            空間上の本当の直線距離も、三平方の定理をちょっと広げることで計算できちゃいます。<br>3次元のゲームなどは、ぜんぶこの <span id="math-p2"></span> という「空間ベクトル」の仕組みでできている！。
+        </div>
+
+        <div class="google-form-container">
+            <iframe 
+                src="https://forms.gle/TxUhWWTcSVzLcYnH6" 
+                width="100%" 
+                height="320" 
+                frameborder="0" 
+                marginheight="0" 
+                marginwidth="0">
+                読み込んでいます…
+            </iframe>
+        </div>
+
+        <div style="width: 100%; max-width: 760px; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn-submit" style="margin: 0; background: var(--warm-orange); padding: 12px 32px; font-size: 1rem; border-radius: 12px;" onclick="location.reload()">もういちど解く</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let quest = 1, isProcessing = false;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const questData = {
+        1: {
+            type: "double-input",
+            title: "Quest 01：まったり家具のレイアウトを計算しよう",
+            text: "お部屋の模様替えプランを練っています。まずはお気に入りの『ローチェア』を配置した位置ベクトル $\\vec{a}=(4,2)$ と、そこから『ミニラグ』の端まで動かす移動ベクトル $\\vec{b}=(-1,3)$ を使って、位置の合成 $\\vec{a}+\\vec{b}$ と、位置の差 $\\vec{a}-\\vec{b}$ をそれぞれ計算してみましょう。",
+            prefix1: "\\vec{a}+\\vec{b} =", placeholder1: "例: (x, y)",
+            prefix2: "\\vec{a}-\\vec{b} =", placeholder2: "例: (x, y)",
+            ans1: ["(3,5)", "3,5"], ans2: ["(5,-1)", "5,-1"]
+        },
+        2: {
+            type: "single-input",
+            title: "Quest 02：大きな観葉植物を動かそう",
+            text: "部屋のすみに大きな『観葉植物』を飾ります。まずはいつもの2倍の距離を見込んで $\\vec{a}=(3,-1)$ の方向へ動かし、そこからちょっと微調整で $\\vec{b}=(-2,5)$ だけずらしました。この植物が最後にたどり着く位置ベクトルを成分で教えてください。",
+            prefix: "2\\vec{a}+\\vec{b} =", placeholder: "例: (x, y)",
+            ans: ["(4,3)", "4,3"]
+        },
+        3: {
+            type: "single-input",
+            title: "Quest 03：フロアライトまでの距離はどれくらい？",
+            text: "お部屋のすみを原点 $O$ として、新しく買った『フロアライト』を $\\vec{p}=(5,12)$ の位置に置きました。原点からこのライトまで、**「平面上で何マス分の直線距離」**が離れているかを計算してみましょう。",
+            prefix: "|\\vec{p}| =", placeholder: "数値を入力",
+            ans: ["13"]
+        },
+        4: {
+            type: "single-input",
+            title: "Quest 04：棚の上に小物を飾ろう（3次元への拡張）",
+            text: "おしゃれな壁掛け棚を取り付けました。真上から見ると $(3,4)$ の位置ですが、高さ（$z$ 成分）が $12\text{マス}$ 上のところにあります。この空間ベクトル $\\vec{b}=(3,4,12)$ の位置にある可愛いインテリア。**お部屋のすみ（原点）から、その小物までの『空間上の直線距離 $|\\vec{b}|$』**はどれくらいでしょう？",
+            prefix: "|\\vec{b}| =", placeholder: "数値を入力",
+            ans: ["13"]
+        }
+    };
+
+    function init() {
+        renderQuest();
+        window.addEventListener('resize', renderQuest);
+    }
+
+    function renderQuest() {
+        isProcessing = false;
+        document.getElementById('submit-btn').disabled = false;
+        
+        const q = questData[quest];
+        document.getElementById('msg').innerHTML = `<strong>${q.title}</strong><br>${q.text}`;
+        renderMathInElement(document.getElementById('msg'), {delimiters:[{left:"$",right:"$",display:false}]});
+
+        const area = document.getElementById('input-area');
+        area.innerHTML = "";
+
+        const stage = document.getElementById('stage');
+        const rect = stage.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+
+        if (q.type === "double-input") {
+            const container = document.createElement('div'); container.className = "input-container";
+            container.innerHTML = `<div class="input-label">成分を入力してね：</div>
+                <div class="multi-input-wrapper">
+                    <div class="input-row"><div class="input-prefix" id="pfx-1"></div><input type="text" id="inp-1" class="text-answer-field" placeholder="${q.placeholder1}"></div>
+                    <div class="input-row"><div class="input-prefix" id="pfx-2"></div><input type="text" id="inp-2" class="text-answer-field" placeholder="${q.placeholder2}"></div>
+                </div>`;
+            area.appendChild(container);
+            katex.render(q.prefix1, document.getElementById('pfx-1'));
+            katex.render(q.prefix2, document.getElementById('pfx-2'));
+            
+            document.getElementById('inp-1').onkeydown = (e) => { if(e.key === 'Enter') document.getElementById('inp-2').focus(); };
+            document.getElementById('inp-2').onkeydown = (e) => { if(e.key === 'Enter') onCheck(); };
+            setTimeout(() => document.getElementById('inp-1').focus(), 200);
+
+        } else if (q.type === "single-input") {
+            const container = document.createElement('div'); container.className = "input-container";
+            container.innerHTML = `<div class="input-label">数値を入力してね：</div>
+                <div class="multi-input-wrapper">
+                    <div class="input-row"><div class="input-prefix" id="pfx-single"></div><input type="text" id="inp-single" class="text-answer-field" placeholder="${q.placeholder}"></div>
+                </div>`;
+            area.appendChild(container);
+            katex.render(q.prefix, document.getElementById('pfx-single'));
+            
+            document.getElementById('inp-single').onkeydown = (e) => { if(e.key === 'Enter') onCheck(); };
+            setTimeout(() => document.getElementById('inp-single').focus(), 200);
+        }
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const W = canvas.width, H = canvas.height;
+        
+        if (quest === 4) {
+            const midX = W / 2;
+            
+            // 左側：真上から見た図
+            ctx.save();
+            const originL = { x: midX * 0.45, y: H * 0.6 };
+            const scaleL = 30;
+            ctx.fillStyle = "#faf6f0"; ctx.fillRect(15, 15, midX-25, H-30);
+            
+            ctx.fillStyle = varToString('--text-main'); font("bold 14px sans-serif"); ctx.textAlign = "center";
+            ctx.fillText("☕ 真上から見た図 (平面の設計図)", midX * 0.5, 35);
+            
+            ctx.strokeStyle = "#eedecb"; ctx.lineWidth = 1;
+            for(let x=-5; x<=5; x++) { ctx.beginPath(); ctx.moveTo(originL.x+x*scaleL, 50); ctx.lineTo(originL.x+x*scaleL, H-40); ctx.stroke(); }
+            for(let y=-5; y<=5; y++) { ctx.beginPath(); ctx.moveTo(20, originL.y-y*scaleL); ctx.lineTo(midX-20, originL.y-y*scaleL); ctx.stroke(); }
+            
+            ctx.strokeStyle = varToString('--text-muted'); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(20, originL.y); ctx.lineTo(midX-20, originL.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(originL.x, 50); ctx.lineTo(originL.x, H-40); strokeAxesL();
+            
+            function strokeAxesL() {
+                ctx.stroke();
+                ctx.fillStyle = varToString('--text-main'); font("bold 13px sans-serif");
+                ctx.fillText("O", originL.x - 14, originL.y + 16);
+            }
+            
+            const ptL = { x: originL.x + 3*scaleL, y: originL.y - 4*scaleL };
+            ctx.fillStyle = varToString('--soft-blue'); ctx.beginPath(); ctx.arc(originL.x, originL.y, 4, 0, Math.PI*2); ctx.fill();
+            drawArrow(originL.x, originL.y, ptL.x - originL.x, ptL.y - originL.y, varToString('--soft-blue'));
+            ctx.fillStyle = varToString('--warm-orange'); ctx.beginPath(); ctx.arc(ptL.x, ptL.y, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = varToString('--text-main'); font("bold 13px sans-serif");
+            ctx.fillText("真下のゆか (3, 4)", ptL.x + 14, ptL.y + 4);
+            ctx.restore();
+
+            // 右側：立体的な高さの図
+            ctx.save();
+            const originR = { x: midX + 60, y: H * 0.8 };
+            const scaleR = 18;
+            ctx.fillStyle = "#faf6f0"; ctx.fillRect(midX+10, 15, midX-25, H-30);
+            
+            ctx.fillStyle = varToString('--text-main'); font("bold 14px sans-serif"); ctx.textAlign = "center";
+            ctx.fillText("🎨 立体的な断面 (壁の棚と高さ)", midX * 1.5, 35);
+            
+            const ptBase = { x: originR.x + 5*scaleR, y: originR.y };
+            const ptTop = { x: originR.x + 5*scaleR, y: originR.y - 12*scaleR };
+            
+            ctx.fillStyle = "#f3ebe1"; ctx.beginPath(); ctx.moveTo(originR.x, originR.y); ctx.lineTo(ptBase.x, ptBase.y); ctx.lineTo(ptTop.x, ptTop.y); ctx.closePath(); ctx.fill();
+            
+            ctx.strokeStyle = varToString('--soft-blue'); ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(originR.x, originR.y); ctx.lineTo(ptBase.x, ptBase.y); ctx.stroke();
+            ctx.strokeStyle = "#8da382"; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(ptBase.x, ptBase.y); ctx.lineTo(ptTop.x, ptTop.y); ctx.stroke();
+            ctx.strokeStyle = varToString('--warm-orange'); ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(originR.x, originR.y); ctx.lineTo(ptTop.x, ptTop.y); ctx.stroke();
+            
+            ctx.strokeStyle = varToString('--text-muted'); ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(ptBase.x - 10, ptBase.y); ctx.lineTo(ptBase.x - 10, ptBase.y - 10); ctx.lineTo(ptBase.x, ptBase.y - 10); ctx.stroke();
+
+            ctx.fillStyle = varToString('--text-main'); font("bold 12px sans-serif");
+            ctx.fillText("ゆかの距離 = 5 (√(3²+4²))", originR.x + 10, originR.y + 18);
+            ctx.fillText("棚の高さ z = 12", ptBase.x + 10, (ptBase.y + ptTop.y)/2);
+            ctx.fillStyle = varToString('--warm-orange'); font("bold 14px sans-serif");
+            ctx.fillText("本当の直線距離 |b| = ?", originR.x + 15, (originR.y + ptTop.y)/2 - 15);
+            
+            ctx.fillStyle = varToString('--warm-orange'); ctx.beginPath(); ctx.arc(ptTop.x, ptTop.y, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = varToString('--text-main'); font("bold 12px sans-serif"); ctx.fillText("🧸 お気に入りの小物", ptTop.x - 40, ptTop.y - 15);
+            ctx.restore();
+            return;
+        }
+
+        let scale = 35;
+        if (quest === 3) scale = 18; 
+        const origin = { x: W * 0.35, y: (quest === 3) ? H * 0.85 : H * 0.65 };
+
+        ctx.strokeStyle = "#f3ebe1"; ctx.lineWidth = 1;
+        for (let x = origin.x % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (let y = origin.y % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+        ctx.strokeStyle = varToString('--text-muted'); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(W, origin.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, H); strokeAxes();
+        
+        function strokeAxes() {
+            ctx.stroke();
+            ctx.fillStyle = varToString('--text-main'); font("bold 15px sans-serif");
+            ctx.fillText("O", origin.x - 18, origin.y + 20);
+            ctx.fillText("x", W - 20, origin.y - 10);
+            ctx.fillText("y", origin.x + 12, 25);
+        }
+
+        ctx.strokeStyle = "#ebdccb"; ctx.lineWidth = 1;
+        font("11px monospace"); ctx.fillStyle = varToString('--text-muted');
+        let stepMax = (quest === 3) ? 14 : 7;
+        for(let i = -stepMax; i <= stepMax; i++) {
+            if(i === 0) continue;
+            let cx = origin.x + i*scale;
+            if (cx > 15 && cx < W - 15) {
+                ctx.beginPath(); ctx.moveTo(cx, origin.y-3); ctx.lineTo(cx, origin.y+3); ctx.stroke();
+                ctx.fillText(i, cx-4, origin.y+16);
+            }
+            let cy = origin.y - i*scale;
+            if (cy > 15 && cy < H - 15) {
+                ctx.beginPath(); ctx.moveTo(origin.x-3, cy); ctx.lineTo(origin.x+3, cy); ctx.stroke();
+                ctx.fillText(i, origin.x-16, cy+4);
+            }
+        }
+
+        const getPix = (gx, gy) => ({ x: origin.x + gx * scale, y: origin.y - gy * scale });
+
+        if (quest === 1) {
+            const A = getPix(4, 2), B = getPix(-1, 3);
+            drawArrow(origin.x, origin.y, A.x - origin.x, A.y - origin.y, varToString('--soft-blue'), "a (チェア)");
+            drawArrow(origin.x, origin.y, B.x - origin.x, B.y - origin.y, "#8da382", "b (ラグ)");
+        } 
+        else if (quest === 2) {
+            const doubleA = getPix(6, -2), Goal = getPix(4, 3);
+            drawArrow(origin.x, origin.y, doubleA.x - origin.x, doubleA.y - origin.y, "rgba(129,178,154,0.3)", "2a");
+            drawArrow(doubleA.x, doubleA.y, Goal.x - doubleA.x, Goal.y - doubleA.y, "rgba(224,122,95,0.4)", "b");
+            drawArrow(origin.x, origin.y, Goal.x - origin.x, Goal.y - origin.y, varToString('--warm-orange'), "2a+b");
+            drawUnit(Goal.x, Goal.y, "観葉植物");
+        } 
+        else if (quest === 3) {
+            const P = getPix(5, 12);
+            drawArrow(origin.x, origin.y, P.x - origin.x, P.y - origin.y, varToString('--soft-blue'), "p");
+            drawUnit(P.x, P.y, "フロアライト");
+            
+            ctx.strokeStyle = "#ebdccb"; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
+            ctx.beginPath(); ctx.moveTo(P.x, origin.y); ctx.lineTo(P.x, P.y); ctx.lineTo(origin.x, P.y); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = varToString('--text-muted'); font("12px sans-serif");
+            ctx.fillText("横幅 = 5", (origin.x+P.x)/2 - 15, origin.y + 15);
+            ctx.fillText("縦幅 = 12", P.x + 10, (origin.y+P.y)/2 + 4);
+        }
+    }
+
+    function drawUnit(x, y, label) {
+        ctx.fillStyle = varToString('--warm-orange'); ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle = varToString('--text-main'); font("bold 12px sans-serif"); ctx.fillText(label, x + 15, y + 4);
+    }
+
+    function drawArrow(x, y, dx, dy, color, label) {
+        ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx, y+dy); ctx.stroke();
+        const a = Math.atan2(dy, dx); ctx.fillStyle = color;
+        ctx.beginPath(); ctx.moveTo(x+dx, y+dy);
+        ctx.lineTo(x+dx-12*Math.cos(a-0.35), y+dy-12*Math.sin(a-0.35));
+        ctx.lineTo(x+dx-12*Math.cos(a+0.35), y+dy-12*Math.sin(a+0.35)); ctx.fill();
+        if(label) { font("bold 13px sans-serif"); ctx.fillText(label, x+dx*0.55 - Math.sin(a)*15, y+dy*0.55 + Math.cos(a)*15); }
+    }
+
+    function cleanStr(s) {
+        return s.replace(/[０-９]/g, m => String.fromCharCode(m.charCodeAt(0) - 65248))
+                .replace(/[（]/g, '(').replace(/[）]/g, ')')
+                .replace(/[，、]/g, ',')
+                .replace(/\s+/g, '')
+                .replace(/[－−―]/g, '-')
+                .toLowerCase();
+    }
+    function font(f) { ctx.font = f; }
+    function varToString(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+    function onCheck() {
+        if (isProcessing) return;
+        const q = questData[quest];
+        let correct = false;
+
+        if (q.type === "double-input") {
+            const v1 = document.getElementById('inp-1').value, v2 = document.getElementById('inp-2').value;
+            if(!v1.trim() || !v2.trim()) { alert("すべての入力欄をうめてね。"); return; }
+            correct = q.ans1.includes(cleanStr(v1)) && q.ans2.includes(cleanStr(v2));
+        } else if (q.type === "single-input") {
+            const v = document.getElementById('inp-single').value;
+            if(!v.trim()) { alert("数値を入力してね。"); return; }
+            correct = q.ans.includes(cleanStr(v));
+        }
+
+        const fb = document.getElementById('feedback');
+        if (correct) {
+            isProcessing = true; document.getElementById('submit-btn').disabled = true;
+            fb.innerHTML = "🍃 ぴったり！きれいにつなぎ合わされました。"; fb.style.color = varToString('--soft-blue');
+            setTimeout(() => { fb.innerHTML = ""; nextQuest(); }, 1200);
+        } else {
+            fb.innerHTML = "🍵 ちょっぴりズレちゃったみたい。もういちど計算してみよう。"; fb.style.color = varToString('--warm-orange');
+        }
+    }
+
+    function nextQuest() {
+        const nodes = document.querySelectorAll('.step-node');
+        if (quest < 4) {
+            nodes[quest-1].className = "step-node done";
+            quest++;
+            nodes[quest-1].className = "step-node active";
+            renderQuest();
+        } else {
+            nodes[quest-1].className = "step-node done";
+            document.getElementById('clear-screen').style.display = 'flex';
+            katex.render("(x, y, z)", document.getElementById('math-p2'));
+        }
+    }
+
+    window.onload = init;
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</body>
+</html>
