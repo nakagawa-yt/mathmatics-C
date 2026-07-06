@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空間ベクトルぱずる：直方体の分解</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        :root {
+            --bg-top: #2c3e50;
+            --bg-bottom: #2980b9;
+            --card-bg: rgba(255, 255, 255, 0.98);
+            --accent-red: #e74c3c;     /* aベクトル方向 */
+            --accent-blue: #3498db;    /* bベクトル方向 */
+            --accent-green: #2ecc71;   /* cベクトル方向 */
+            --text-color: #2d3436;
+            --grid-line: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom));
+            background-attachment: fixed;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .container {
+            background: var(--card-bg);
+            width: 95%;
+            max-width: 900px;
+            padding: 30px;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        /* 外枠カード：上下中央揃え */
+        .instruction-card {
+            background: #f0f7ff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #d1e5f0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 問題文テキストエリア：数式をインラインで流す */
+        #q-text {
+            width: 100%;
+            font-size: 1.15rem;
+            line-height: 1.8;
+            text-align: left;
+            display: block;
+        }
+
+        /* 数式の改行を防ぐ設定 */
+        .math-target, .katex {
+            display: inline-block !important;
+            white-space: nowrap !important;
+            vertical-align: middle;
+        }
+
+        /* 3Dステージ用のコンテナ */
+        .grid-container {
+            background: #ffffff;
+            border: 3px solid #636e72;
+            width: 560px;
+            height: 500px;
+            margin: 0 auto;
+            padding: 0;
+            border-radius: 24px;
+            position: relative;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .answer-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin: 15px 0;
+            height: 30px;
+        }
+
+        .main-btn {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #2980b9;
+            transition: 0.1s;
+        }
+        .main-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #2980b9; }
+
+        .feedback { min-height: 40px; margin-top: 15px; font-weight: bold; font-size: 1.3rem; }
+
+        #result-view { display: none; }
+        .form-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        /* 空間軸ベクトルの色 */
+        .v1 { color: var(--accent-red); font-weight: bold; }   /* a */
+        .v2 { color: var(--accent-blue); font-weight: bold; }  /* b */
+        .v3 { color: var(--accent-green); font-weight: bold; } /* c */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="game-view">
+        <div style="color: var(--accent-blue); font-weight: bold; margin-bottom: 10px;">
+            Spatial Vector Challenge <span id="q-num">1</span> / 6
+        </div>
+        
+        <div class="instruction-card">
+            <div id="q-text"></div>
+        </div>
+
+        <div class="grid-container" id="grid"></div>
+
+        <div class="controls">
+            <div class="answer-display">答え：<span id="selected-name">頂点の動物をクリックしてね</span></div>
+            <button class="main-btn" id="action-btn" onclick="handleAction()">決定する</button>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+    </div>
+
+    <div id="result-view">
+        <div style="font-size: 4rem; margin-bottom: 10px;">🎓</div>
+        <h2>全6問、完全クリア！</h2>
+        <p>すべての空間ベクトルパズルを正しく解き明かしたね！素晴らしい空間認識能力です！</p>
+        <div class="form-container">
+            <iframe src="https://forms.gle/BcMy8AEuXQFc47Bu5" frameborder="0" width="100%" height="100%">読み込んでいます…</iframe>
+        </div>
+        <button class="main-btn" style="margin-top: 25px;" onclick="location.reload()">もう一度あそぶ</button>
+    </div>
+</div>
+
+<script>
+    // 直方体の8頂点に動物をマッピング
+    const animalPlacement = [
+        { x: 0, y: 0, z: 0, icon: "🐶", name: "イヌ" },
+        { x: 1, y: 0, z: 0, icon: "🐱", name: "ネコ" },
+        { x: 0, y: 1, z: 0, icon: "🐹", name: "ハムスター" },
+        { x: 1, y: 1, z: 0, icon: "🐰", name: "ウサギ" },
+        { x: 0, y: 0, z: 1, icon: "🐯", name: "トラ" },
+        { x: 1, y: 0, z: 1, icon: "🦁", name: "ライオン" },
+        { x: 0, y: 1, z: 1, icon: "🐷", name: "ブタ" },
+        { x: 1, y: 1, z: 1, icon: "🐸", name: "カエル" }
+    ];
+
+    // 4問目と5問目の難易度順を入れ替えた問題データ
+    const questions = [
+        { text: "空間の基本ベクトルは、<span class='v1 math-target'>\\vec{a}</span> (イヌ→ネコ), <span class='v2 math-target'>\\vec{b}</span> (イヌ→ハムスター), <span class='v3 math-target'>\\vec{c}</span> (イヌ→トラ) となっています。<br>始点を <b>ネコ</b> としたとき、<b>「イヌからハムスター」</b>と同じだけ進んだ終点にいる動物はだれ？", ans: "ウサギ", start: "ネコ", end: "ウサギ" },
+        { text: "始点を <b>ハムスター</b> とします。<br>ここから、<b>「イヌからライオン」</b>と同じだけ進んだ終点にいる動物はだれ？", ans: "カエル", start: "ハムスター", end: "カエル" },
+        { text: "ベクトルの向きが反対のものを逆ベクトルと呼びます。<br>始点を <b>ウサギ</b> としたとき、<b>「イヌからネコへ」</b>の逆ベクトルの分だけ進んだ終点はどこ？", ans: "ハムスター", start: "ウサギ", end: "ハムスター" },
+        { text: "【空間ベクトルの分解と平行移動】<br>斜めの移動を考えます。<b>「トラからネコへ」</b>と同じ移動ベクトルを考えます。<br>これを <b>ブタ</b> を始点として進んだときの終点はどこ？", ans: "ウサギ", start: "ブタ", end: "ウサギ" },
+        { text: "【ベクトルの引き算】<br><b>「イヌからブタへ」</b>から、<b>「イヌからトラへ」の2倍</b>を差し引いた移動ベクトルを考えます。<br>始点を <b>トラ</b> にすると、終点はどこ？", ans: "ハムスター", start: "トラ", end: "ハムスター" },
+        { text: "【ラスト！】<br><b>「イヌからウサギへ」の2倍</b>から、<b>「イヌからカエルへ」</b>を引き算した移動ベクトルを考えます。<br>始点を <b>トラ</b> にしたときの終点はどこ？", ans: "ウサギ", start: "トラ", end: "ウサギ" }
+    ];
+
+    let currentIdx = 0;
+    let selectedName = "";
+    let isCorrected = false;
+
+    const canvasWidth = 560;
+    const canvasHeight = 500;
+
+    // 直方体をキャンバスの中心に配置する3D投影関数
+    function project(x, y, z) {
+        const cx = 151; 
+        const cy = 312; 
+        
+        const scaleX = 180; // aベクトル（右前）の長さ
+        const scaleY = 110; // bベクトル（右奥）の長さ
+        const scaleZ = 145; // cベクトル（真上）の長さ
+        
+        const angleX = 25 * Math.PI / 180;   
+        const angleY = -30 * Math.PI / 180;  
+        
+        const px = cx + x * scaleX * Math.cos(angleX) + y * scaleY * Math.cos(angleY);
+        const py = cy + x * scaleX * Math.sin(angleX) + y * scaleY * Math.sin(angleY) - z * scaleZ;
+        
+        return { x: px, y: py };
+    }
+
+    function initGrid() {
+        const container = document.getElementById('grid');
+        container.innerHTML = "";
+        
+        const canvas = document.createElement('canvas');
+        canvas.id = 'vector-canvas';
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        canvas.style.cursor = 'pointer';
+        container.appendChild(canvas);
+        
+        canvas.addEventListener('click', function(e) {
+            if (isCorrected) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            let closest = null;
+            let minDist = 35; 
+            
+            animalPlacement.forEach(a => {
+                const pt = project(a.x, a.y, a.z);
+                const dist = Math.hypot(mx - pt.x, my - pt.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = a;
+                }
+            });
+            
+            if (closest) {
+                selectedName = closest.name;
+                document.getElementById('selected-name').innerText = closest.name;
+                drawScene();
+            }
+        });
+    }
+
+    function draw3DArrow(ctx, p1, p2, color, lineWidth = 3, label = "") {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lineWidth;
+        
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const headLength = 12;
+        ctx.beginPath();
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(p2.x - headLength * Math.cos(angle - Math.PI / 6), p2.y - headLength * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(p2.x - headLength * Math.cos(angle + Math.PI / 6), p2.y - headLength * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+
+        if (label) {
+            ctx.fillStyle = color;
+            ctx.font = "italic bold 16px sans-serif";
+            let offsetX = 8;
+            let offsetY = 4;
+            if (label === "b") { offsetX = 8; offsetY = -8; }
+            if (label === "c") { offsetX = -15; offsetY = -8; }
+            ctx.fillText(label, p2.x + offsetX, p2.y + offsetY);
+        }
+    }
+
+    function drawScene() {
+        const canvas = document.getElementById('vector-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const q = questions[currentIdx];
+
+        // 1. 直方体のワイヤーフレーム線
+        ctx.strokeStyle = "rgba(178, 190, 195, 0.4)";
+        ctx.lineWidth = 1.5;
+        
+        for(let y=0; y<=1; y++) {
+            for(let z=0; z<=1; z++) {
+                const p1 = project(0, y, z), p2 = project(1, y, z);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+        }
+        for(let x=0; x<=1; x++) {
+            for(let z=0; z<=1; z++) {
+                const p1 = project(x, 0, z), p2 = project(x, 1, z);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+        }
+        for(let x=0; x<=1; x++) {
+            for(let y=0; y<=1; y++) {
+                const p1 = project(x, y, 0), p2 = project(x, y, 1);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+        }
+
+        // 2. 基本ベクトルガイド (原点イヌから伸ばす)
+        const pOrig = project(0, 0, 0);
+        draw3DArrow(ctx, pOrig, project(1, 0, 0), "rgba(231, 76, 60, 0.8)", 4, "a");
+        draw3DArrow(ctx, pOrig, project(0, 1, 0), "rgba(52, 152, 219, 0.8)", 4, "b");
+        draw3DArrow(ctx, pOrig, project(0, 0, 1), "rgba(46, 204, 113, 0.8)", 4, "c");
+
+        // 3. 正解時の分解ルート線の描画 (引き算や逆ベクトルに対応した軸平行ステップ描画)
+        if (isCorrected) {
+            const sA = animalPlacement.find(a => a.name === q.start);
+            const eA = animalPlacement.find(a => a.name === q.end);
+            if (sA && eA) {
+                ctx.lineWidth = 3.5;
+                ctx.setLineDash([4, 4]);
+                
+                const pt0 = project(sA.x, sA.y, sA.z);
+                const pt1 = project(eA.x, sA.y, sA.z);
+                const pt2 = project(eA.x, eA.y, sA.z);
+                const pt3 = project(eA.x, eA.y, eA.z);
+                
+                if(sA.x !== eA.x) {
+                    ctx.strokeStyle = "var(--accent-red)";
+                    ctx.beginPath(); ctx.moveTo(pt0.x, pt0.y); ctx.lineTo(pt1.x, pt1.y); ctx.stroke();
+                }
+                if(sA.y !== eA.y) {
+                    ctx.strokeStyle = "var(--accent-blue)";
+                    ctx.beginPath(); ctx.moveTo(pt1.x, pt1.y); ctx.lineTo(pt2.x, pt2.y); ctx.stroke();
+                }
+                if(sA.z !== eA.z) {
+                    ctx.strokeStyle = "var(--accent-green)";
+                    ctx.beginPath(); ctx.moveTo(pt2.x, pt2.y); ctx.lineTo(pt3.x, pt3.y); ctx.stroke();
+                }
+                ctx.setLineDash([]);
+                draw3DArrow(ctx, pt0, pt3, "#f1c40f", 5);
+            }
+        }
+
+        // 4. 動物アイコン (奥から手前のレイヤー順で綺麗に重ねて描画)
+        for (let y = 1; y >= 0; y--) {
+            for (let x = 0; x <= 1; x++) {
+                for (let z = 0; z <= 1; z++) {
+                    const a = animalPlacement.find(ap => ap.x === x && ap.y === y && ap.z === z);
+                    if (!a) continue;
+                    
+                    const pt = project(a.x, a.y, a.z);
+                    
+                    if (selectedName === a.name) {
+                        ctx.fillStyle = "rgba(241, 196, 15, 0.3)";
+                        ctx.strokeStyle = "#f1c40f";
+                        ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(pt.x, pt.y, 24, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    }
+                    
+                    ctx.font = "32px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(a.icon, pt.x, pt.y - 4);
+                    
+                    ctx.font = "bold 12px sans-serif";
+                    ctx.fillStyle = (selectedName === a.name) ? "#d35400" : "#2d3436";
+                    ctx.fillText(a.name, pt.x, pt.y + 20);
+                }
+            }
+        }
+    }
+
+    function loadQuestion() {
+        isCorrected = false;
+        selectedName = "";
+        const q = questions[currentIdx];
+        document.getElementById('q-num').innerText = currentIdx + 1;
+        
+        const qTextEl = document.getElementById('q-text');
+        qTextEl.innerHTML = q.text;
+        
+        qTextEl.querySelectorAll('.math-target').forEach(el => {
+            const tex = el.textContent || el.innerText;
+            katex.render(tex, el, { 
+                throwOnError: false, 
+                displayMode: false 
+            });
+        });
+
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('selected-name').innerText = "頂点の動物をクリックしてね";
+        document.getElementById('action-btn').innerText = "決定する";
+        drawScene();
+    }
+
+    function handleAction() {
+        if (isCorrected) {
+            currentIdx++;
+            if (currentIdx < questions.length) loadQuestion();
+            else showResult();
+        } else {
+            const q = questions[currentIdx];
+            const fb = document.getElementById('feedback');
+            if (!selectedName) return;
+            if (selectedName === q.ans) {
+                fb.innerText = "正解です！空間の移動ルートが見えたね！ ✨";
+                fb.style.color = "#27ae60";
+                document.getElementById('action-btn').innerText = "次の問題へ";
+                isCorrected = true;
+                drawScene();
+            } else {
+                fb.innerText = "そこじゃないみたい。進む方向をもう一度確かめてみて！";
+                fb.style.color = "#e67e22";
+            }
+        }
+    }
+
+    function showResult() {
+        document.getElementById('game-view').style.display = "none";
+        document.getElementById('result-view').style.display = "block";
+    }
+
+    initGrid();
+    loadQuestion();
+</script>
+
+</body>
+</html>
