@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>どうぶつポッピン★マーブルチョコ 標本調査アプリ | 数学B</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --font-rounded: 'M PLUS Rounded 1c', sans-serif;
+      --font-pop: 'Fredoka One', cursive;
+    }
+
+    body {
+      font-family: var(--font-rounded);
+      background: linear-gradient(135deg, #fff0f5 0%, #e8f5e9 50%, #e0f7fa 100%);
+      color: #2d3436;
+      touch-action: manipulation;
+      min-height: 100vh;
+    }
+
+    .font-pop {
+      font-family: var(--font-pop);
+    }
+
+    /* 筒のフワフワアニメーション */
+    @keyframes tubeFloat {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(2deg); }
+    }
+
+    .animate-float-tube {
+      animation: tubeFloat 3.5s ease-in-out infinite;
+    }
+
+    /* 筒のシェイク演出 */
+    @keyframes tubeShake {
+      0% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-12deg) scale(1.05) translateY(-5px); }
+      40% { transform: rotate(12deg) scale(1.05) translateY(-5px); }
+      60% { transform: rotate(-8deg) scale(1.08); }
+      80% { transform: rotate(8deg) scale(1.08); }
+      100% { transform: rotate(-15deg) scale(1.05) translateY(10px); }
+    }
+
+    .animate-shake-tube {
+      animation: tubeShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+    }
+
+    /* キャップ飛び出しアニメーション */
+    @keyframes capPop {
+      0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+      50% { opacity: 1; transform: translateY(-120px) rotate(-45deg) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-200px) rotate(-90deg) scale(0.8); }
+    }
+
+    .animate-cap-pop {
+      animation: capPop 0.6s ease-out forwards;
+    }
+
+    /* ポップテキスト演出 */
+    @keyframes popTextAnim {
+      0% { opacity: 0; transform: scale(0.2) rotate(-10deg); }
+      50% { opacity: 1; transform: scale(1.3) rotate(5deg); }
+      80% { opacity: 1; transform: scale(1.1) rotate(-2deg); }
+      100% { opacity: 0; transform: scale(0.9) translateY(-30px); }
+    }
+
+    .pop-text-anim {
+      animation: popTextAnim 0.8s ease-out forwards;
+    }
+
+    /* バウンド出現効果 */
+    @keyframes popBounce {
+      0% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .animate-pop-bounce {
+      animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* ポップカードスタイル */
+    .pop-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 4px solid #ffbe76;
+      box-shadow: 0 15px 35px -5px rgba(255, 121, 121, 0.2);
+    }
+
+    .glow-tube {
+      filter: drop-shadow(0 8px 20px rgba(255, 107, 129, 0.35));
+    }
+  </style>
+</head>
+<body class="flex flex-col justify-between items-center p-3 md:p-6 select-none relative">
+
+  <header class="w-full max-w-4xl text-center mb-3">
+    <div class="inline-flex items-center gap-2 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 text-white px-5 py-1.5 rounded-full text-xs md:text-sm font-black shadow-md">
+      <span>🐾 数学B 統計的な推測 — 標本調査実験（5本） 🐾</span>
+    </div>
+    <h1 class="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-600 to-purple-600 mt-1.5 tracking-wide">
+      どうぶつポッピン★マーブルチョコ 標本調査
+    </h1>
+  </header>
+
+  <main class="w-full max-w-4xl flex-grow flex flex-col justify-center items-center">
+
+    <!-- ================= SCENE 1: 商品紹介（細長い筒状パッケージ・100円・標準30個） ================= -->
+    <section id="scene-intro" class="w-full pop-card rounded-3xl p-5 md:p-8 text-center transition-all">
+      <div class="mb-4">
+        <span class="bg-orange-500 text-white font-black px-4 py-1.5 rounded-full text-xs md:text-sm shadow-sm">STEP 1 : 調査対象のお菓子</span>
+        <h2 class="text-2xl md:text-3xl font-black text-orange-600 mt-2">
+          どうぶつポッピン★マーブルチョコ
+        </h2>
+        <p class="text-xs md:text-sm text-gray-600 mt-1 font-bold">手軽に買える人気の筒入りお菓子！パッケージをよく確認しよう！</p>
+      </div>
+
+      <!-- 筒状ケースSVG ＆ スペック表示 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gradient-to-br from-amber-100 via-pink-50 to-orange-100 p-5 md:p-6 rounded-2xl border-4 border-amber-300 mb-6 text-left items-center">
+        
+        <!-- 細長い筒（どうぶつイラスト入り）SVG -->
+        <div class="flex justify-center items-center relative py-2">
+          <div class="absolute -top-2 -left-2 bg-yellow-400 text-amber-950 font-black text-xs px-3 py-1 rounded-full shadow-md z-10 animate-bounce">
+            🐼 100円でお得！ 🐻
+          </div>
+
+          <svg class="w-36 h-64 md:w-44 md:h-72 glow-tube animate-float-tube" viewBox="0 0 140 260">
+            <ellipse cx="70" cy="250" rx="45" ry="8" fill="#d35400" opacity="0.2"/>
+
+            <defs>
+              <linearGradient id="tubeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ff9ff3"/>
+                <stop offset="30%" stop-color="#fabca1"/>
+                <stop offset="70%" stop-color="#ffbe76"/>
+                <stop offset="100%" stop-color="#ff7675"/>
+              </linearGradient>
+              <linearGradient id="capGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#54a0ff"/>
+                <stop offset="50%" stop-color="#2e86de"/>
+                <stop offset="100%" stop-color="#192a56"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 筒本体 -->
+            <rect x="30" y="45" width="80" height="195" rx="10" fill="url(#tubeGrad)" stroke="#ffffff" stroke-width="3"/>
+            <path d="M 30 230 Q 70 245 110 230 L 110 240 Q 70 252 30 240 Z" fill="#e84118"/>
+
+            <!-- パンダイラスト -->
+            <circle cx="70" cy="115" r="28" fill="#ffffff" stroke="#ffbe76" stroke-width="3"/>
+            <circle cx="50" cy="94" r="8" fill="#2f3542"/>
+            <circle cx="90" cy="94" r="8" fill="#2f3542"/>
+            <ellipse cx="60" cy="112" rx="6" ry="8" fill="#2f3542"/>
+            <ellipse cx="80" cy="112" rx="6" ry="8" fill="#2f3542"/>
+            <circle cx="62" cy="110" r="2.5" fill="#ffffff"/>
+            <circle cx="82" cy="110" r="2.5" fill="#ffffff"/>
+            <ellipse cx="70" cy="118" rx="4" ry="2.5" fill="#2f3542"/>
+            <path d="M 66 122 Q 70 126 74 122" fill="none" stroke="#2f3542" stroke-width="2" stroke-linecap="round"/>
+
+            <!-- クマの顔 -->
+            <circle cx="70" cy="172" r="20" fill="#f5cd79" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="56" cy="158" r="6" fill="#eccc68"/>
+            <circle cx="84" cy="158" r="6" fill="#eccc68"/>
+            <circle cx="64" cy="170" r="2" fill="#57606f"/>
+            <circle cx="76" cy="170" r="2" fill="#57606f"/>
+            <ellipse cx="70" cy="174" rx="3" ry="2" fill="#57606f"/>
+
+            <!-- ロゴ表記 -->
+            <rect x="35" y="55" width="70" height="24" rx="12" fill="#ffffff" opacity="0.9"/>
+            <text x="70" y="71" text-anchor="middle" fill="#d63031" font-size="11" font-weight="900" font-family="'M PLUS Rounded 1c'">どうぶつポッピン</text>
+
+            <!-- 水玉模様 -->
+            <circle cx="42" cy="205" r="5" fill="#ff4757"/>
+            <circle cx="98" cy="200" r="6" fill="#1e90ff"/>
+            <circle cx="70" cy="218" r="5" fill="#2ed573"/>
+            <circle cx="45" cy="140" r="4" fill="#ffa502"/>
+            <circle cx="95" cy="142" r="4" fill="#9c88ff"/>
+
+            <!-- キャップ -->
+            <rect x="26" y="20" width="88" height="28" rx="8" fill="url(#capGrad)" stroke="#ffffff" stroke-width="2.5"/>
+            <line x1="40" y1="20" x2="40" y2="48" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+            <line x1="70" y1="20" x2="70" y2="48" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+            <line x1="100" y1="20" x2="100" y2="48" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <!-- 価格と標準個数のスペックカード -->
+        <div class="flex flex-col gap-3">
+          <div class="bg-white p-4 rounded-2xl border-3 border-orange-300 shadow-sm hover:scale-102 transition-transform">
+            <span class="text-xs font-black text-orange-500 block">💰 販売価格（1本あたり）</span>
+            <span class="text-3xl font-black text-orange-600">100円 <span class="text-xs text-gray-600 font-extrabold">（税込）</span></span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border-3 border-amber-300 shadow-sm hover:scale-102 transition-transform">
+            <span class="text-xs font-black text-amber-600 block">🏷️ パッケージ表記（標準内容量）</span>
+            <span class="text-2xl md:text-3xl font-black text-amber-900">標準 30個 入り</span>
+            <p class="text-[11px] text-amber-700 mt-1 font-bold">※ケース裏面：「内容量は平均値です（多少のばらつきがあります）」</p>
+          </div>
+
+          <div class="bg-yellow-100/90 p-3 rounded-xl border-2 border-yellow-300 text-xs font-bold text-yellow-950">
+            💡 100円で約30個入っていれば、<strong>チョコ1個あたり約3.3円</strong>の計算になります！
+          </div>
+
+          <div class="bg-yellow-100/90 p-3 rounded-xl border-2 border-yellow-300 text-xs font-bold text-yellow-950">
+            💡 100円でぴったり30個入っていれば、<strong>チョコ1個あたり約3.3円</strong>の計算になります！
+          </div>
+        </div>
+      </div>
+
+      <!-- 開封スタートボタン -->
+      <button onclick="goToScene('experiment')" class="w-full max-w-md bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 hover:from-orange-500 hover:to-purple-600 text-white font-black text-xl py-4 px-8 rounded-2xl shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer border-2 border-white">
+        🐾 5本を開けて調査を開始する！ ✨
+      </button>
+    </section>
+
+    <!-- ================= SCENE 2: 5本開封アニメーションステージ ================= -->
+    <section id="scene-experiment" class="w-full pop-card rounded-3xl p-4 md:p-6 text-center hidden flex flex-col items-center">
+      
+      <!-- 進捗プログレスヘッダー -->
+      <div class="w-full flex items-center justify-between mb-3 px-2">
+        <span class="bg-gradient-to-r from-orange-500 to-pink-500 text-white font-black px-4 py-2 rounded-full text-sm md:text-base shadow-md">
+          <span id="bag-count-num" class="text-yellow-300 font-pop text-xl">1</span> / 5 本目
+        </span>
+
+        <div class="flex-grow mx-4 bg-orange-100 h-5 rounded-full overflow-hidden border-2 border-orange-300 p-0.5">
+          <div id="progress-bar-fill" class="bg-gradient-to-r from-orange-400 via-pink-500 to-amber-400 h-full w-1/5 rounded-full transition-all duration-300"></div>
+        </div>
+
+        <span class="text-xs md:text-sm font-black text-amber-900 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-300">
+          標準 30個入り
+        </span>
+      </div>
+
+      <!-- 開封アニメーションステージ -->
+      <div class="relative w-full max-w-2xl bg-gradient-to-b from-sky-100 via-amber-50 to-pink-100 rounded-2xl border-4 border-amber-300 p-2 md:p-4 overflow-hidden flex flex-col items-center justify-center min-h-[420px]">
+        
+        <!-- ポンッ！演出テキスト -->
+        <div id="pop-effect-text" class="absolute top-8 z-30 font-black text-orange-600 text-4xl md:text-6xl drop-shadow-lg opacity-0 pointer-events-none">
+          💥 ポンッ！コロコロ〜♪ ✨
+        </div>
+
+        <!-- 細長い筒SVG ＆ 独立したキャップSVG -->
+        <div id="tube-container" class="relative z-10 transition-transform cursor-pointer hover:scale-105 my-2" onclick="triggerOpenTube()">
+          <!-- 飛ぶキャップ -->
+          <div id="cap-element" class="absolute -top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+            <svg class="w-24 h-10" viewBox="0 0 100 40">
+              <rect x="6" y="5" width="88" height="28" rx="8" fill="url(#capGradExp)" stroke="#ffffff" stroke-width="2.5"/>
+              <line x1="25" y1="5" x2="25" y2="33" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+              <line x1="50" y1="5" x2="50" y2="33" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+              <line x1="75" y1="5" x2="75" y2="33" stroke="#ffffff" opacity="0.3" stroke-width="2"/>
+              <defs>
+                <linearGradient id="capGradExp" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#54a0ff"/>
+                  <stop offset="100%" stop-color="#192a56"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          <!-- 筒本体SVG -->
+          <svg id="tube-svg" class="w-28 h-48 md:w-32 md:h-56 drop-shadow-xl" viewBox="0 0 120 220">
+            <rect x="20" y="30" width="80" height="180" rx="10" fill="url(#tubeGradExp)" stroke="#ffffff" stroke-width="3"/>
+            <ellipse cx="60" cy="30" rx="40" ry="10" fill="#2f3542" stroke="#ffffff" stroke-width="2"/>
+            
+            <circle cx="60" cy="95" r="24" fill="#ffffff" stroke="#ffbe76" stroke-width="2.5"/>
+            <circle cx="44" cy="78" r="6" fill="#2f3542"/>
+            <circle cx="76" cy="78" r="6" fill="#2f3542"/>
+            <ellipse cx="52" cy="93" rx="5" ry="7" fill="#2f3542"/>
+            <ellipse cx="68" cy="93" rx="5" ry="7" fill="#2f3542"/>
+            <circle cx="53" cy="91" r="2" fill="#ffffff"/>
+            <circle cx="69" cy="91" r="2" fill="#ffffff"/>
+            <ellipse cx="60" cy="98" rx="3" ry="2" fill="#2f3542"/>
+
+            <rect x="25" y="130" width="70" height="20" rx="10" fill="#ffffff" opacity="0.9"/>
+            <text x="60" y="144" text-anchor="middle" fill="#d63031" font-size="10" font-weight="900" font-family="'M PLUS Rounded 1c'">どうぶつポッピン</text>
+
+            <circle cx="35" cy="175" r="5" fill="#ff4757"/>
+            <circle cx="85" cy="170" r="5" fill="#1e90ff"/>
+            <circle cx="60" cy="190" r="5" fill="#2ed573"/>
+
+            <defs>
+              <linearGradient id="tubeGradExp" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ff9ff3"/>
+                <stop offset="50%" stop-color="#ffbe76"/>
+                <stop offset="100%" stop-color="#ff7675"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <!-- マーブルチョコ跳ね出し Canvas -->
+        <canvas id="choco-canvas" class="absolute inset-0 w-full h-full z-20 pointer-events-none"></canvas>
+
+        <!-- 計測トレイ -->
+        <div class="relative w-full max-w-lg h-28 md:h-32 mt-2 bg-gradient-to-b from-white to-amber-100 rounded-3xl border-4 border-amber-400 shadow-inner flex items-center justify-center">
+          <span class="text-amber-400 font-black text-xs md:text-sm absolute bottom-2 tracking-widest">★ 30個入り計測トレイ ★</span>
+        </div>
+
+        <!-- 結果カウントバッジ -->
+        <div id="result-badge" class="absolute top-4 right-4 z-30 bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 font-black text-2xl md:text-3xl px-5 py-2.5 rounded-2xl shadow-2xl border-4 border-white opacity-0 transform scale-50 transition-all">
+          <span id="result-badge-text">30 個！</span>
+        </div>
+      </div>
+
+      <!-- 操作ボタン -->
+      <div class="mt-4 flex flex-col sm:flex-row items-center gap-3 w-full max-w-md justify-center">
+        <button id="open-btn" onclick="triggerOpenTube()" class="w-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 hover:from-orange-500 hover:to-purple-600 text-white font-black text-lg md:text-xl py-3.5 px-6 rounded-2xl shadow-lg transition-transform transform active:scale-95 cursor-pointer border-2 border-white">
+          🚀 1本開ける！
+        </button>
+        <button id="to-result-btn" onclick="goToScene('result')" class="w-full bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-lg md:text-xl py-3.5 px-6 rounded-2xl shadow-lg hidden animate-pop-bounce cursor-pointer border-2 border-white">
+          📊 5本の調査結果＆評価へ！
+        </button>
+      </div>
+
+      <!-- 開封履歴 -->
+      <div class="w-full mt-4">
+        <p class="text-xs font-black text-amber-900 text-left mb-1.5">5本の開封記録：</p>
+        <div id="history-chips" class="flex flex-wrap gap-2 min-h-[42px] items-center"></div>
+      </div>
+    </section>
+
+    <!-- ================= SCENE 3: 標本結果・メーカー評価・Google Form ================= -->
+    <section id="scene-result" class="w-full pop-card rounded-3xl p-4 md:p-8 text-center hidden">
+      
+      <div class="mb-5">
+        <span class="bg-gradient-to-r from-orange-500 to-pink-500 text-white font-black px-4 py-1.5 rounded-full text-xs md:text-sm shadow-sm">標本調査（5本）データ分析</span>
+        <h2 class="text-2xl md:text-3xl font-black text-amber-950 mt-1">
+          5本の調査結果 ＆ メーカー評価
+        </h2>
+      </div>
+
+      <!-- 結果データ表示カード -->
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div class="bg-orange-50 border-3 border-orange-200 rounded-2xl p-3.5 flex flex-col justify-center">
+          <span class="text-xs font-black text-orange-700">1本の平均個数（標本平均）</span>
+          <div class="text-2xl md:text-3xl font-black text-orange-600 my-0.5">
+            <span id="mean-value">29.8</span> <span class="text-xs text-gray-700 font-extrabold">個</span>
+          </div>
+          <span class="text-[10px] text-orange-800 font-bold">（標準表記: 30個）</span>
+        </div>
+
+        <div class="bg-pink-50 border-3 border-pink-200 rounded-2xl p-3.5 flex flex-col justify-center">
+          <span class="text-xs font-black text-pink-700">チョコ1個あたりの平均価格</span>
+          <div class="text-2xl md:text-3xl font-black text-pink-700 my-0.5">
+            <span id="price-per-choco">3.4</span> <span class="text-xs text-gray-700 font-extrabold">円</span>
+          </div>
+          <span class="text-[10px] text-pink-800 font-bold">（100円 ÷ 平均個数）</span>
+        </div>
+
+        <div class="col-span-2 md:col-span-1 bg-amber-50 border-3 border-amber-200 rounded-2xl p-3.5 flex flex-col justify-center">
+          <span class="text-xs font-black text-amber-800">最小個数 / 最大個数</span>
+          <div class="text-xl md:text-2xl font-black text-amber-950 my-0.5">
+            <span id="min-val" class="text-blue-600">28</span> 〜 <span id="max-val" class="text-emerald-600">32</span> <span class="text-xs text-gray-700 font-extrabold">個</span>
+          </div>
+          <span class="text-[10px] text-amber-800 font-bold">（個数の差: <span id="range-val">4</span>個）</span>
+        </div>
+      </div>
+
+      <!-- グラフ表示領域 -->
+      <div class="bg-white border-3 border-orange-200 rounded-2xl p-4 mb-6 shadow-sm">
+        <h3 class="text-xs md:text-sm font-black text-gray-800 text-left mb-2 flex justify-between items-center">
+          <span>📊 開封した5本の個数ばらつきグラフ</span>
+          <span class="text-[11px] font-bold text-gray-500">--- 標準: 30個 / --- 5本の平均</span>
+        </h3>
+        <div id="bar-chart-container" class="h-44 md:h-52 w-full flex items-end justify-around gap-2 pt-6 pb-2 px-2 border-b-3 border-orange-300 relative">
+          <div id="std-line" class="absolute w-full border-b-2 border-dashed border-amber-400 z-10 pointer-events-none">
+            <span class="absolute left-0 -top-4 bg-amber-400 text-amber-950 font-black text-[9px] px-1.5 py-0.5 rounded">標準 30個</span>
+          </div>
+          <div id="avg-line" class="absolute w-full border-b-2 border-solid border-orange-500 z-10 pointer-events-none">
+            <span id="avg-line-label" class="absolute right-0 -top-4 bg-orange-500 text-white font-black text-[9px] px-1.5 py-0.5 rounded">標本平均</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 製造会社評価コーナー -->
+      <div class="bg-gradient-to-br from-amber-100 via-orange-50 to-pink-100 border-4 border-amber-300 rounded-2xl p-4 md:p-6 mb-6 text-left shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-3xl">🏭</span>
+          <h3 class="text-lg md:text-xl font-black text-amber-950">
+            この製造会社（ポッピン製菓）を評価してみよう！
+          </h3>
+        </div>
+        <p class="text-xs md:text-sm text-amber-900 mb-4 font-bold">
+          パッケージ表記は「標準 30個入り（100円）」。今回の5本の平均は <strong id="rating-mean-text" class="text-orange-600 text-base">29.8個</strong> でした。あなたはこのメーカーをどう判定する？
+        </p>
+
+        <!-- 生徒評価アンケートボタン -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <button onclick="rateManufacturer('god')" class="rate-btn bg-white hover:bg-emerald-50 border-3 border-emerald-400 text-emerald-950 font-black p-3 rounded-xl shadow-sm text-xs text-center transition-all cursor-pointer hover:scale-102">
+            <div class="text-xl mb-1">🌟 良心的でお得！</div>
+            <div class="text-[10px] text-emerald-700">「100円で十分な量！お得で大満足」</div>
+          </button>
+          
+          <button onclick="rateManufacturer('good')" class="rate-btn bg-white hover:bg-blue-50 border-3 border-blue-400 text-blue-950 font-black p-3 rounded-xl shadow-sm text-xs text-center transition-all cursor-pointer hover:scale-102">
+            <div class="text-xl mb-1">🙂 まあ普通かな</div>
+            <div class="text-[10px] text-blue-700">「機械詰めの誤差の範囲内。普通にOK！」</div>
+          </button>
+
+          <button onclick="rateManufacturer('doubt')" class="rate-btn bg-white hover:bg-amber-50 border-3 border-amber-400 text-amber-950 font-black p-3 rounded-xl shadow-sm text-xs text-center transition-all cursor-pointer hover:scale-102">
+            <div class="text-xl mb-1">🤔 少し不満・少ない？</div>
+            <div class="text-[10px] text-amber-800">「30個未満が多くて少し損した気分…」</div>
+          </button>
+
+          <button onclick="rateManufacturer('bad')" class="rate-btn bg-white hover:bg-rose-50 border-3 border-rose-400 text-rose-950 font-black p-3 rounded-xl shadow-sm text-xs text-center transition-all cursor-pointer hover:scale-102">
+            <div class="text-xl mb-1">⚠️ ばらつきが多い / 不満</div>
+            <div class="text-[10px] text-rose-700">「30個から離れすぎていて品質が気になる！」</div>
+          </button>
+        </div>
+
+        <div id="rating-feedback" class="hidden bg-white rounded-xl p-4 border-2 border-amber-300 animate-pop-bounce">
+          <p id="rating-feedback-text" class="font-black text-xs md:text-sm text-amber-950 leading-relaxed"></p>
+        </div>
+      </div>
+
+      <!-- Google Form 挿入・クラス集計エリア -->
+      <div class="bg-white border-4 border-indigo-300 rounded-2xl p-4 md:p-6 mb-6 text-left shadow-md">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-indigo-100 pb-3 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📋</span>
+            <div>
+              <h3 class="text-base md:text-lg font-black text-indigo-950">
+                クラス全体のデータを入力・共有しよう！
+              </h3>
+              <p class="text-[11px] text-indigo-600 font-bold">各グループで求めた平均値や結果を下のフォームから送信してください。</p>
+            </div>
+          </div>
+
+          <!-- 先生用URL設定ボタン -->
+          <button onclick="toggleFormConfig()" class="self-end sm:self-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-indigo-300 font-black text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer">
+            <span>⚙️ GoogleフォームURLを設定</span>
+          </button>
+        </div>
+
+        <!-- 先生用設定アコーディオン -->
+        <div id="form-config-panel" class="hidden bg-indigo-50/80 border-2 border-indigo-200 rounded-xl p-3.5 mb-4 text-xs font-bold text-indigo-950">
+          <label class="block mb-1 text-indigo-900 font-black">⚙️ 【先生用】埋め込み用Google Form URL (または&lt;iframe&gt;埋め込みタグ):</label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="text" id="form-url-input" placeholder="https://forms.gle/tAB13CrgGED5AehSA" class="flex-grow bg-white border-2 border-indigo-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+            <button onclick="saveFormUrl()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap">
+              保存して反映
+            </button>
+          </div>
+          <p class="text-[10px] text-indigo-600 mt-1.5">※Googleフォームの「送信」→「&lt;/&gt; 埋め込みHTML」からコピーしたsrc属性URLを貼り付けできます。入力内容は端末に自動保存されます。</p>
+        </div>
+
+        <!-- Google Form 埋め込みコンテナ -->
+        <div id="google-form-container" class="w-full bg-slate-50 border-2 border-indigo-200 rounded-xl overflow-hidden min-h-[480px] flex items-center justify-center relative">
+          <!-- デフォルト表示プレビュー（URL未設定時） -->
+          <div id="form-placeholder" class="text-center p-6 text-slate-500">
+            <div class="text-4xl mb-2">📝</div>
+            <p class="font-black text-sm text-slate-700 mb-1">Google フォーム埋め込み表示エリア</p>
+            <p class="text-xs max-w-sm mx-auto mb-3">右上ボタンからクラス用フォームのURL（埋め込み用リンク）を登録すると、ここにGoogleフォームが直接表示されます。</p>
+            <button onclick="toggleFormConfig()" class="bg-indigo-600 text-white font-black text-xs px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition-all cursor-pointer">
+              GoogleフォームURLを今すぐ設定する
+            </button>
+          </div>
+
+          <!-- 実際のiframe -->
+          <iframe id="google-form-iframe" src="" class="w-full h-[520px] border-0 hidden" loading="lazy">読み込み中...</iframe>
+        </div>
+      </div>
+
+      <!-- リセットボタン -->
+      <div class="flex justify-center">
+        <button onclick="resetAndRepeat()" class="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 hover:from-orange-500 hover:to-purple-600 text-white font-black text-lg py-3.5 px-8 rounded-2xl shadow-lg transition-all cursor-pointer border-2 border-white">
+          🔄 別の5本を購入して再調査する！ ✨
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    const TOTAL_TUBES = 5;
+    const PRICE_PER_TUBE = 100; // 100円
+    const STD_COUNT = 30;       // 標準 30個入り
+
+    // 出現確率ロジック (8回に1回パターン):
+    // 1/8 (12.5%) : 30個未満多めパターン (low: 平均27.0〜27.4個前後)
+    // 1/8 (12.5%) : 30個超え多めパターン (high: 平均33.0〜33.4個前後)
+    // 6/8 (75.0%) : 標準バランスパターン (normal: 平均30.2〜30.6個前後のリアルなばらつき)
+    let groupPatternType = 'normal';
+    function initializeRandomGroupType() {
+      const rand = Math.random();
+      if (rand < 0.125) {
+        groupPatternType = 'low';
+      } else if (rand < 0.250) {
+        groupPatternType = 'high';
+      } else {
+        groupPatternType = 'normal';
+      }
+    }
+    initializeRandomGroupType();
+
+    let currentTubeIndex = 0;
+    let tubeResults = [];
+    let isAnimating = false;
+
+    let canvas, ctx;
+    let particles = [];
+    let animFrameId = null;
+
+    const MARBLE_COLORS = [
+      { fill: '#ff4757', border: '#d63031' },
+      { fill: '#1e90ff', border: '#0984e3' },
+      { fill: '#2ed573', border: '#26de81' },
+      { fill: '#ffa502', border: '#e1b12c' },
+      { fill: '#a55eea', border: '#8854d0' },
+      { fill: '#ff78ae', border: '#e84393' }
+    ];
+
+    function generateChocoCountForTube(tubeIndex) {
+      if (groupPatternType === 'low') {
+        // 30未満多めパターン (5本の標本平均が26.8〜27.4個前後)
+        const lowPools = [
+          [26, 28, 25, 27, 28], // 平均 26.8個
+          [27, 26, 29, 27, 28], // 平均 27.4個
+          [28, 27, 25, 29, 26], // 平均 27.0個
+          [26, 29, 27, 28, 27]  // 平均 27.4個
+        ];
+        if (!window.selectedPattern) {
+          window.selectedPattern = lowPools[Math.floor(Math.random() * lowPools.length)];
+        }
+        return window.selectedPattern[tubeIndex];
+      } else if (groupPatternType === 'high') {
+        // 30超え多めパターン (5本の標本平均が33.0〜33.4個前後)
+        const highPools = [
+          [33, 35, 32, 33, 34], // 平均 33.4個
+          [32, 34, 35, 31, 33], // 平均 33.0個
+          [34, 32, 33, 35, 32], // 平均 33.2個
+          [33, 31, 34, 35, 33]  // 平均 33.2個
+        ];
+        if (!window.selectedPattern) {
+          window.selectedPattern = highPools[Math.floor(Math.random() * highPools.length)];
+        }
+        return window.selectedPattern[tubeIndex];
+      } else {
+        // 標準パターン (5本の標本平均が30.2個, 30.4個, 30.6個などのリアルな誤差)
+        const normalPools = [
+          [29, 32, 30, 28, 33], // 平均 30.4個
+          [30, 31, 32, 29, 31], // 平均 30.6個
+          [31, 29, 30, 32, 29], // 平均 30.2個
+          [28, 33, 31, 29, 32], // 平均 30.6個
+          [30, 32, 29, 31, 30]  // 平均 30.4個
+        ];
+        if (!window.selectedPattern) {
+          window.selectedPattern = normalPools[Math.floor(Math.random() * normalPools.length)];
+        }
+        return window.selectedPattern[tubeIndex];
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      canvas = document.getElementById('choco-canvas');
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // 保存済みGoogleフォームURLの復元
+      loadSavedFormUrl();
+    });
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    function goToScene(sceneName) {
+      document.getElementById('scene-intro').classList.add('hidden');
+      document.getElementById('scene-experiment').classList.add('hidden');
+      document.getElementById('scene-result').classList.add('hidden');
+
+      if (sceneName === 'intro') {
+        document.getElementById('scene-intro').classList.remove('hidden');
+      } else if (sceneName === 'experiment') {
+        document.getElementById('scene-experiment').classList.remove('hidden');
+        resizeCanvas();
+        if (tubeResults.length === 0) {
+          resetExperimentState();
+        }
+      } else if (sceneName === 'result') {
+        document.getElementById('scene-result').classList.remove('hidden');
+        renderResultData();
+      }
+    }
+
+    function resetExperimentState() {
+      tubeResults = [];
+      currentTubeIndex = 0;
+      window.selectedPattern = null;
+      initializeRandomGroupType(); // 再試行時も確率判定
+      updateExperimentProgress();
+      document.getElementById('history-chips').innerHTML = '';
+      document.getElementById('to-result-btn').classList.add('hidden');
+      document.getElementById('open-btn').classList.remove('hidden');
+      document.getElementById('open-btn').disabled = false;
+    }
+
+    class MarbleParticle {
+      constructor(startX, startY, targetX, targetY) {
+        this.x = startX + (Math.random() - 0.5) * 20;
+        this.y = startY;
+        this.radiusX = 8.5 + Math.random() * 1.5;
+        this.radiusY = 7.0 + Math.random() * 1.5;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = -(Math.random() * 3 + 2);
+        this.gravity = 0.48;
+        this.bounce = 0.45;
+        this.friction = 0.86;
+
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.isSettled = false;
+        this.rotation = Math.random() * Math.PI;
+
+        this.color = MARBLE_COLORS[Math.floor(Math.random() * MARBLE_COLORS.length)];
+      }
+
+      update(floorY) {
+        if (this.isSettled) return;
+
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.y + this.radiusY >= floorY) {
+          this.y = floorY - this.radiusY;
+          this.vy = -this.vy * this.bounce;
+          this.vx *= this.friction;
+
+          if (Math.abs(this.vy) < 1.2 && Math.abs(this.vx) < 0.6) {
+            this.isSettled = true;
+            this.x = this.targetX;
+            this.y = this.targetY;
+          }
+        }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radiusX, this.radiusY, 0, 0, Math.PI * 2);
+        ctx.fillStyle = this.color.fill;
+        ctx.fill();
+        ctx.strokeStyle = this.color.border;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(-this.radiusX * 0.3, -this.radiusY * 0.3, this.radiusX * 0.35, this.radiusY * 0.25, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    class StarParticle {
+      constructor(startX, startY) {
+        this.x = startX;
+        this.y = startY;
+        this.vx = (Math.random() - 0.5) * 12;
+        this.vy = (Math.random() - 0.5) * 10 - 4;
+        this.size = Math.random() * 7 + 4;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.03 + 0.02;
+        this.color = ['#ffd32a', '#ff4757', '#70a1ff', '#ffffff'][Math.floor(Math.random() * 4)];
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.2;
+        this.life -= this.decay;
+      }
+
+      draw(ctx) {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function triggerOpenTube() {
+      if (isAnimating || currentTubeIndex >= TOTAL_TUBES) return;
+
+      isAnimating = true;
+      const openBtn = document.getElementById('open-btn');
+      openBtn.disabled = true;
+
+      const tubeContainer = document.getElementById('tube-container');
+      const capElement = document.getElementById('cap-element');
+      const popText = document.getElementById('pop-effect-text');
+
+      tubeContainer.classList.add('animate-shake-tube');
+      capElement.classList.add('animate-cap-pop');
+
+      popText.classList.remove('pop-text-anim');
+      void popText.offsetWidth;
+      popText.classList.add('pop-text-anim');
+
+      setTimeout(() => {
+        const count = generateChocoCountForTube(currentTubeIndex);
+        tubeResults.push(count);
+
+        startChocoAnimation(count, () => {
+          showResultBadge(count);
+          addHistoryChip(currentTubeIndex + 1, count);
+
+          currentTubeIndex++;
+          updateExperimentProgress();
+
+          setTimeout(() => {
+            tubeContainer.classList.remove('animate-shake-tube');
+            capElement.classList.remove('animate-cap-pop');
+
+            if (currentTubeIndex < TOTAL_TUBES) {
+              openBtn.disabled = false;
+              isAnimating = false;
+            } else {
+              openBtn.classList.add('hidden');
+              document.getElementById('to-result-btn').classList.remove('hidden');
+              isAnimating = false;
+            }
+          }, 400);
+        });
+
+      }, 400);
+    }
+
+    function startChocoAnimation(count, onComplete) {
+      particles = [];
+      let stars = [];
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+
+      const rect = canvas.getBoundingClientRect();
+      const startX = rect.width / 2;
+      const startY = rect.height * 0.30;
+      const floorY = rect.height * 0.84;
+
+      for (let s = 0; s < 25; s++) {
+        stars.push(new StarParticle(startX, startY));
+      }
+
+      const cols = 10;
+      const spacingX = 18;
+      const spacingY = 15;
+      const startGridX = startX - ((cols - 1) * spacingX) / 2;
+
+      for (let i = 0; i < count; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const targetX = startGridX + col * spacingX + (row % 2 === 1 ? 8 : 0);
+        const targetY = floorY - row * spacingY - 6;
+
+        setTimeout(() => {
+          particles.push(new MarbleParticle(startX, startY, targetX, targetY));
+        }, i * 22);
+      }
+
+      let startTime = null;
+      function loop(timestamp) {
+        if (!startTime) startTime = timestamp;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        stars.forEach(s => {
+          s.update();
+          s.draw(ctx);
+        });
+
+        let allSettled = particles.length === count;
+        particles.forEach(p => {
+          p.update(floorY);
+          p.draw(ctx);
+          if (!p.isSettled) allSettled = false;
+        });
+
+        if (allSettled && (timestamp - startTime > count * 22 + 450)) {
+          onComplete();
+        } else {
+          animFrameId = requestAnimationFrame(loop);
+        }
+      }
+
+      animFrameId = requestAnimationFrame(loop);
+    }
+
+    function showResultBadge(count) {
+      const badge = document.getElementById('result-badge');
+      const badgeText = document.getElementById('result-badge-text');
+      badgeText.innerText = `${currentTubeIndex + 1}本目：${count} 個！`;
+
+      badge.classList.remove('opacity-0', 'scale-50');
+      badge.classList.add('opacity-100', 'scale-100', 'animate-pop-bounce');
+
+      setTimeout(() => {
+        badge.classList.remove('animate-pop-bounce');
+      }, 350);
+    }
+
+    function updateExperimentProgress() {
+      const displayIndex = Math.min(currentTubeIndex + 1, TOTAL_TUBES);
+      document.getElementById('bag-count-num').innerText = displayIndex;
+      const pct = (currentTubeIndex / TOTAL_TUBES) * 100;
+      document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+    }
+
+    function addHistoryChip(tubeNum, count) {
+      const container = document.getElementById('history-chips');
+      const chip = document.createElement('div');
+      chip.className = 'bg-white border-2 border-orange-300 text-amber-950 font-black text-xs md:text-sm px-3 py-1.5 rounded-xl shadow-sm animate-pop-bounce flex items-center gap-1.5';
+      chip.innerHTML = `<span class="text-orange-500">${tubeNum}本目:</span> <span class="text-orange-600 text-base font-pop">${count}個</span>`;
+      container.appendChild(chip);
+    }
+
+    function renderResultData() {
+      if (tubeResults.length === 0) return;
+
+      const sum = tubeResults.reduce((a, b) => a + b, 0);
+      const mean = (sum / tubeResults.length).toFixed(1);
+      const minVal = Math.min(...tubeResults);
+      const maxVal = Math.max(...tubeResults);
+      const pricePerChoco = (PRICE_PER_TUBE / parseFloat(mean)).toFixed(1);
+
+      document.getElementById('mean-value').innerText = mean;
+      document.getElementById('rating-mean-text').innerText = `${mean} 個`;
+      document.getElementById('price-per-choco').innerText = pricePerChoco;
+      document.getElementById('min-val').innerText = minVal;
+      document.getElementById('max-val').innerText = maxVal;
+      document.getElementById('range-val').innerText = maxVal - minVal;
+
+      const container = document.getElementById('bar-chart-container');
+      const bars = container.querySelectorAll('.chart-bar-col');
+      bars.forEach(b => b.remove());
+
+      const chartMax = Math.max(40, maxVal + 4);
+
+      const colGradients = [
+        'from-orange-500 to-amber-400',
+        'from-pink-500 to-rose-400',
+        'from-purple-500 to-indigo-400',
+        'from-emerald-400 to-teal-400',
+        'from-cyan-500 to-blue-400'
+      ];
+
+      tubeResults.forEach((count, idx) => {
+        const heightPct = (count / chartMax) * 100;
+        const gradClass = colGradients[idx % colGradients.length];
+
+        const col = document.createElement('div');
+        col.className = 'chart-bar-col flex-1 flex flex-col items-center h-full justify-end group z-20';
+        col.innerHTML = `
+          <span class="text-xs font-black text-orange-600 mb-1 font-pop">${count}</span>
+          <div class="w-full max-w-[36px] bg-gradient-to-t ${gradClass} rounded-t-xl shadow-md transition-all duration-500 group-hover:brightness-110" style="height: ${heightPct}%;"></div>
+          <span class="text-xs font-black text-amber-950 mt-1.5">${idx + 1}本目</span>
+        `;
+        container.appendChild(col);
+      });
+
+      const stdPct = (STD_COUNT / chartMax) * 100;
+      document.getElementById('std-line').style.bottom = `${stdPct}%`;
+
+      const avgPct = (parseFloat(mean) / chartMax) * 100;
+      const avgLine = document.getElementById('avg-line');
+      avgLine.style.bottom = `${avgPct}%`;
+      document.getElementById('avg-line-label').innerText = `平均: ${mean}個`;
+
+      document.getElementById('rating-feedback').classList.add('hidden');
+    }
+
+    function rateManufacturer(type) {
+      const feedbackBox = document.getElementById('rating-feedback');
+      const feedbackText = document.getElementById('rating-feedback-text');
+      feedbackBox.classList.remove('hidden');
+
+      const meanStr = document.getElementById('mean-value').innerText;
+      const minStr = document.getElementById('min-val').innerText;
+      const maxStr = document.getElementById('max-val').innerText;
+
+      if (type === 'god') {
+        feedbackText.innerHTML = `🌟 <span class="text-emerald-700">【良心的でお得！】</span> 「100円で平均${meanStr}個入っていて、チョコ1個当たり約${document.getElementById('price-per-choco').innerText}円！お小遣いで買えるコスパ最強メーカー！」という高評価ですね。`;
+      } else if (type === 'good') {
+        feedbackText.innerHTML = `😊 <span class="text-blue-700">【まあ普通かな】</span> 「機械で自動的に詰める時の誤差。平均${meanStr}個なら100円として十分満足！」という意見ですね。`;
+      } else if (type === 'doubt') {
+        feedbackText.innerHTML = `🤔 <span class="text-amber-800">【少し不満・少ない？】</span> 「標準30個と書いてあるのに、平均${meanStr}個（最小${minStr}個）で30個未満が多いと少し損した気分…」という意見ですね。`;
+      } else if (type === 'bad') {
+        feedbackText.innerHTML = `⚠️ <span class="text-rose-700">【ばらつきが多い / 不満】</span> 「筒によって${minStr}個〜${maxStr}個とばらつきがあったり、全体的に30個から離れていて品質コントロールが気になる！」という厳しい意見ですね。`;
+      }
+    }
+
+    function toggleFormConfig() {
+      const panel = document.getElementById('form-config-panel');
+      panel.classList.toggle('hidden');
+    }
+
+    function saveFormUrl() {
+      let urlInput = document.getElementById('form-url-input').value.trim();
+      
+      // iframe埋め込みコードタグからsrc抽出処理
+      if (urlInput.includes('<iframe') && urlInput.includes('src=')) {
+        const match = urlInput.match(/src=["']([^"']+)["']/);
+        if (match && match[1]) {
+          urlInput = match[1];
+        }
+      }
+
+      if (urlInput) {
+        localStorage.setItem('sample_survey_form_url', urlInput);
+        applyFormUrl(urlInput);
+        document.getElementById('form-config-panel').classList.add('hidden');
+      } else {
+        localStorage.removeItem('sample_survey_form_url');
+        resetFormToPlaceholder();
+      }
+    }
+
+    function loadSavedFormUrl() {
+      const savedUrl = localStorage.getItem('sample_survey_form_url');
+      if (savedUrl) {
+        document.getElementById('form-url-input').value = savedUrl;
+        applyFormUrl(savedUrl);
+      }
+    }
+
+    function applyFormUrl(url) {
+      const iframe = document.getElementById('google-form-iframe');
+      const placeholder = document.getElementById('form-placeholder');
+
+      iframe.src = url;
+      iframe.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    }
+
+    function resetFormToPlaceholder() {
+      const iframe = document.getElementById('google-form-iframe');
+      const placeholder = document.getElementById('form-placeholder');
+
+      iframe.src = '';
+      iframe.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    }
+
+    function resetAndRepeat() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const badge = document.getElementById('result-badge');
+      badge.classList.add('opacity-0', 'scale-50');
+
+      resetExperimentState();
+      goToScene('experiment');
+    }
+  </script>
+</body>
+</html>
