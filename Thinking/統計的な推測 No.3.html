@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>賞金ハント・トーナメント 💰 データ変化シミュレーター</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap');
+
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+    }
+
+    /* 宝箱カード */
+    .chest-card {
+      transition: all 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chest-card:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .chest-card:active {
+      transform: scale(0.96);
+    }
+
+    /* ドットプロット軸エリア */
+    .dot-plot-axis {
+      position: relative;
+      height: 150px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-bottom: 2px solid #64748b;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* 固定目盛り線 */
+    .tick-line {
+      position: absolute;
+      top: 0;
+      bottom: 24px;
+      width: 1px;
+      background-color: #e2e8f0;
+      pointer-events: none;
+    }
+    .tick-line-zero {
+      position: absolute;
+      top: 0;
+      bottom: 24px;
+      width: 2px;
+      background-color: #94a3b8;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* まとめバッジ */
+    .dot-badge-10 {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 5px rgba(217, 119, 6, 0.3);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      line-height: 1;
+      transition: left 0.2s ease;
+    }
+
+    .dot-badge-100 {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      line-height: 1;
+      transition: left 0.2s ease;
+    }
+
+    .dot-mark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      transition: left 0.2s ease, bottom 0.2s ease;
+    }
+
+    /* スライダーデザイン */
+    input[type=range] {
+      accent-color: #2563eb;
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="p-3 md:p-6 pb-12">
+
+<div class="max-w-7xl mx-auto space-y-5">
+
+  <!-- ヘッダー -->
+  <header class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-2xl font-black shadow-md shadow-amber-500/20">
+        🏆
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-black text-slate-800">
+          賞金ハント・トーナメント 💰 データ変化シミュレーター
+        </h1>
+        <p class="text-xs text-slate-500 font-bold mt-0.5">
+          数学B 統計的な推測：データに対する「掛け算」と「足し算」の性質を視覚的に観察しよう
+        </p>
+      </div>
+    </div>
+
+    <!-- リセットボタン -->
+    <button onclick="resetAllData()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-xs text-slate-700 hover:text-rose-600 font-bold transition flex items-center gap-2">
+      <i class="fa-solid fa-rotate-left"></i> 全データクリア
+    </button>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- 左カラム: データ収集 & スライダー操作 (lg: 5/12) -->
+    <div class="lg:col-span-5 space-y-5">
+
+      <!-- STEP 1: 元の賞金データ X の獲得 -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-black">1</span>
+            元データ X の収集
+          </h2>
+          <span class="text-xs text-slate-500 font-bold">サンプル数: <b id="sample-count-x" class="text-base text-amber-600">0</b> 人</span>
+        </div>
+
+        <p class="text-xs text-slate-600 font-medium leading-relaxed">
+          宝箱をタップするか、一括ボタンを押してデータ（0～1000万円）を集めましょう。
+        </p>
+
+        <!-- 宝箱タップグリッド -->
+        <div class="grid grid-cols-5 gap-2 my-2" id="chest-grid">
+          <!-- JSで生成 -->
+        </div>
+
+        <!-- 一括収集ボタン -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="addSamples(10)" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-users text-amber-500"></i> +10人追加
+          </button>
+          <button onclick="addSamples(100)" class="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-bolt"></i> 100人一括ハント！
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 2: ルール調整スライダー (掛け算 & 足し算) -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black">2</span>
+            データ変換
+          </h2>
+          <button onclick="resetSliders()" class="text-xs text-blue-600 font-bold hover:underline">標準に戻す</button>
+        </div>
+
+        <div class="space-y-5">
+          <!-- 掛け算（実数倍 a）スライダー -->
+          <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 space-y-2">
+            <div class="flex justify-between items-center text-xs font-bold text-blue-900">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-xmark text-blue-600"></i> 掛け算
+              </span>
+              <span class="text-sm font-black text-blue-600" id="slider-mul-val">1.0 倍</span>
+            </div>
+            <input type="range" id="slider-mul" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full h-2 bg-blue-200 rounded-lg cursor-pointer" oninput="updateAll()">
+            <div class="flex justify-between text-[10px] text-slate-400 font-bold px-1">
+              <span>0.1倍</span>
+              <span>1.0倍</span>
+              <span>2.5倍</span>
+              <span>5.0倍</span>
+            </div>
+          </div>
+
+          <!-- 足し算（和 b）スライダー -->
+          <div class="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-2">
+            <div class="flex justify-between items-center text-xs font-bold text-emerald-900">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-plus text-emerald-600"></i> 足し算
+              </span>
+              <span class="text-sm font-black text-emerald-600" id="slider-add-val">+0 万円</span>
+            </div>
+            <input type="range" id="slider-add" min="-500" max="500" step="50" value="0" class="w-full h-2 bg-emerald-200 rounded-lg cursor-pointer" oninput="updateAll()">
+            <div class="flex justify-between text-[10px] text-slate-400 font-bold px-1">
+              <span>-500万</span>
+              <span>0万</span>
+              <span>+250万</span>
+              <span>+500万</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 右カラム: 統計データ & ドットプロット (lg: 7/12) -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <!-- STEP 3: 統計データ比較テーブル -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <div class="border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-black">3</span>
+            統計指標の比較
+          </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-center text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-500 font-bold bg-slate-50/80">
+                <th class="py-2.5 text-left pl-3">統計指標</th>
+                <th class="py-2.5 text-amber-600">元のデータ </th>
+                <th class="py-2.5 text-blue-600">変換後のデータ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-bold">
+              <tr>
+                <td class="py-3 text-left pl-3 text-slate-700">平均</td>
+                <td class="text-amber-600 text-sm" id="stat-mean-x">0.0 万円</td>
+                <td class="text-blue-600 text-sm" id="stat-mean-y">0.0 万円</td>
+              </tr>
+              <tr>
+                <td class="py-3 text-left pl-3 text-slate-700">分散</td>
+                <td class="text-amber-600 text-sm" id="stat-var-x">0.0</td>
+                <td class="text-blue-600 text-sm" id="stat-var-y">0.0</td>
+              </tr>
+              <tr>
+                <td class="py-3 text-left pl-3 text-slate-700">標準偏差</td>
+                <td class="text-amber-600 text-sm" id="stat-sd-x">0.0 万円</td>
+                <td class="text-blue-600 text-sm" id="stat-sd-y">0.0 万円</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STEP 4: ドットプロット視覚化比較（固定目盛り） -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-pink-600 text-white flex items-center justify-center text-xs font-black">4</span>
+            分布グラフの比較（固定目盛り: -500万 ～ 5500万円）
+          </h2>
+          <span class="text-[11px] font-bold text-slate-400">※目盛り固定でデータのみ動作</span>
+        </div>
+
+        <!-- 元データ X 軸 -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-amber-600 flex items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 元のデータの分布
+            </span>
+            <span class="text-slate-400 text-[11px]">固定目盛り</span>
+          </div>
+          <div class="dot-plot-axis" id="axis-x"></div>
+        </div>
+
+        <!-- 変換後データ Y 軸 -->
+        <div class="space-y-1.5 pt-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-blue-600 flex items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> 変換後のデータの分布
+            </span>
+            <span class="text-slate-400 text-[11px]">スライダーでグラフのみ伸縮・平行移動</span>
+          </div>
+          <div class="dot-plot-axis" id="axis-y"></div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- Google Form 埋め込み用振り返りセクション -->
+  <footer class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3 mt-6">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-question text-blue-600"></i> 授業振り返りフォーム
+      </h3>
+      <button onclick="toggleUrlEditor()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 font-bold transition">
+        ⚙️ フォームURL変更
+      </button>
+    </div>
+
+    <!-- URL設定パネル -->
+    <div id="url-editor-panel" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+      <div class="font-bold text-slate-700">Google Form URLの設定:</div>
+      <div class="flex gap-2">
+        <input type="text" id="custom-form-url" value="https://forms.gle/cYF3cq8gBfEE8L2w9" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 font-mono">
+        <button onclick="updateFormUrl()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition whitespace-nowrap">更新</button>
+      </div>
+    </div>
+
+    <!-- フォーム埋め込み（高さ650px） -->
+    <div class="w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200 h-[650px]">
+      <iframe id="google-form-iframe" src="https://forms.gle/cYF3cq8gBfEE8L2w9" class="w-full h-full border-0">読み込み中...</iframe>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  // 固定目盛り範囲の設定（-500万円 ～ 5500万円）
+  const FIXED_MIN = -500;
+  const FIXED_MAX = 5500;
+  const FIXED_RANGE = FIXED_MAX - FIXED_MIN; // 6000万円
+
+  // 目盛り刻み情報
+  const TICKS = [-500, 0, 1000, 2000, 3000, 4000, 5000, 5500];
+
+  // レアリティ別賞金設定（万円）
+  const REWARD_TIERS = [
+    { name: '1000万', pt: 1000, prob: 0.05, icon: '💎', color: 'border-amber-400 bg-amber-50 text-amber-700' },
+    { name: '500万',  pt: 500,  prob: 0.15, icon: '🥇', color: 'border-yellow-400 bg-yellow-50 text-yellow-700' },
+    { name: '200万',  pt: 200,  prob: 0.30, icon: '🥈', color: 'border-slate-300 bg-slate-50 text-slate-700' },
+    { name: '50万',   pt: 50,   prob: 0.35, icon: '🥉', color: 'border-amber-700/40 bg-amber-50/50 text-amber-800' },
+    { name: '0円',    pt: 0,    prob: 0.15, icon: '❌', color: 'border-slate-200 bg-slate-100 text-slate-400' }
+  ];
+
+  // データ状態
+  let dataX = [];
+
+  // Web Audio 効果音
+  function playSound(freq, type='sine', duration=0.15) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  // 初期化
+  window.addEventListener('DOMContentLoaded', () => {
+    renderChestGrid();
+    updateAll();
+  });
+
+  // 宝箱グリッド描画
+  function renderChestGrid() {
+    const grid = document.getElementById('chest-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const card = document.createElement('div');
+      card.className = 'chest-card bg-slate-50 rounded-xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-[75px]';
+      card.innerHTML = `
+        <div class="text-2xl animate-bounce">🎁</div>
+        <div class="text-[10px] font-bold text-slate-400 mt-1">タップ！</div>
+      `;
+      card.onclick = () => openChest(card);
+      grid.appendChild(card);
+    }
+  }
+
+  // 抽選
+  function drawReward() {
+    const rand = Math.random();
+    let cumulative = 0;
+    for (let tier of REWARD_TIERS) {
+      cumulative += tier.prob;
+      if (rand <= cumulative) return tier;
+    }
+    return REWARD_TIERS[REWARD_TIERS.length - 1];
+  }
+
+  // 宝箱開封
+  function openChest(cardEl) {
+    const tier = drawReward();
+    dataX.push(tier.pt);
+    playSound(600 + tier.pt, 'triangle', 0.2);
+
+    cardEl.className = `chest-card rounded-xl p-2 border-2 ${tier.color} shadow-sm flex flex-col items-center justify-center min-h-[75px]`;
+    cardEl.innerHTML = `
+      <div class="text-xl">${tier.icon}</div>
+      <div class="text-[10px] font-black mt-0.5">${tier.name}</div>
+    `;
+
+    setTimeout(() => {
+      cardEl.className = 'chest-card bg-slate-50 rounded-xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-[75px]';
+      cardEl.innerHTML = `
+        <div class="text-2xl animate-bounce">🎁</div>
+        <div class="text-[10px] font-bold text-slate-400 mt-1">タップ！</div>
+      `;
+    }, 1200);
+
+    updateAll();
+  }
+
+  // サンプル追加
+  function addSamples(count) {
+    playSound(800, 'sine', 0.1);
+    for (let i = 0; i < count; i++) {
+      const tier = drawReward();
+      dataX.push(tier.pt);
+    }
+    updateAll();
+  }
+
+  // 全リセット
+  function resetAllData() {
+    dataX = [];
+    resetSliders();
+    updateAll();
+  }
+
+  // スライダーリセット
+  function resetSliders() {
+    document.getElementById('slider-mul').value = 1.0;
+    document.getElementById('slider-add').value = 0;
+    updateAll();
+  }
+
+  // 統計量の計算
+  function calcStats(arr) {
+    if (arr.length === 0) return { mean: 0, var: 0, sd: 0 };
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
+    const sd = Math.sqrt(variance);
+    return { mean, var: variance, sd };
+  }
+
+  // 全表示の更新
+  function updateAll() {
+    const mul = parseFloat(document.getElementById('slider-mul').value);
+    const add = parseInt(document.getElementById('slider-add').value);
+
+    // スライダーラベル更新
+    document.getElementById('slider-mul-val').innerText = `${mul.toFixed(1)} 倍`;
+    document.getElementById('slider-add-val').innerText = `${add >= 0 ? '+' : ''}${add} 万円`;
+
+    // 件数
+    document.getElementById('sample-count-x').innerText = dataX.length;
+
+    // 変換後データ Y の計算
+    const dataY = dataX.map(x => x * mul + add);
+
+    const statsX = calcStats(dataX);
+    const statsY = calcStats(dataY);
+
+    // 統計データテーブル更新
+    document.getElementById('stat-mean-x').innerText = `${statsX.mean.toFixed(1)} 万円`;
+    document.getElementById('stat-var-x').innerText = statsX.var.toLocaleString(undefined, {maximumFractionDigits:1});
+    document.getElementById('stat-sd-x').innerText = `${statsX.sd.toFixed(1)} 万円`;
+
+    document.getElementById('stat-mean-y').innerText = `${statsY.mean.toFixed(1)} 万円`;
+    document.getElementById('stat-var-y').innerText = statsY.var.toLocaleString(undefined, {maximumFractionDigits:1});
+    document.getElementById('stat-sd-y').innerText = `${statsY.sd.toFixed(1)} 万円`;
+
+    // 固定目盛りの下でドットプロットを描画
+    renderDotPlot('x', dataX, '#f59e0b');
+    renderDotPlot('y', dataY, '#2563eb');
+  }
+
+  // ドットプロット描画関数（完全固定目盛り）
+  function renderDotPlot(axisId, data, color) {
+    const axis = document.getElementById(`axis-${axisId}`);
+    axis.innerHTML = '';
+
+    // 1. 固定目盛り背景と数字を描画（絶対座標%指定）
+    let backgroundTicksHtml = '';
+    TICKS.forEach(tickVal => {
+      const pct = ((tickVal - FIXED_MIN) / FIXED_RANGE) * 100;
+      const leftCss = `calc(24px + (100% - 48px) * ${pct / 100})`;
+      const lineClass = tickVal === 0 ? 'tick-line-zero' : 'tick-line';
+
+      backgroundTicksHtml += `<div class="${lineClass}" style="left: ${leftCss};"></div>`;
+      backgroundTicksHtml += `
+        <div class="absolute bottom-1 text-[10px] font-bold text-slate-400 transform -translate-x-1/2 pointer-events-none" style="left: ${leftCss};">
+          ${tickVal < 0 ? tickVal : (tickVal === 0 ? '0' : tickVal + '万')}
+        </div>
+      `;
+    });
+
+    axis.innerHTML = backgroundTicksHtml;
+
+    if (data.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.className = 'w-full h-full flex items-center justify-center text-xs text-slate-400 font-bold relative z-10';
+      emptyMsg.innerText = 'データがありません';
+      axis.appendChild(emptyMsg);
+      return;
+    }
+
+    // 値ごとの出現数をカウント
+    const counts = {};
+    data.forEach(val => {
+      // 浮動小数点数誤差対策
+      const rounded = Math.round(val * 10) / 10;
+      counts[rounded] = (counts[rounded] || 0) + 1;
+    });
+
+    Object.keys(counts).forEach(valStr => {
+      const val = Number(valStr);
+      const totalCount = counts[val];
+
+      const count100 = Math.floor(totalCount / 100);
+      const remainder100 = totalCount % 100;
+      const count10 = Math.floor(remainder100 / 10);
+      const remainingDots = remainder100 % 10;
+
+      // X位置計算（固定目盛り FIXED_MIN ～ FIXED_MAX に対する割合）
+      const pct = Math.min(1, Math.max(0, (val - FIXED_MIN) / FIXED_RANGE));
+      const leftPosCss = `calc(24px + (100% - 48px) * ${pct})`;
+
+      let currentBottom = 22;
+
+      // 100個まとめバッジ
+      if (count100 > 0) {
+        const badge100 = document.createElement('div');
+        badge100.className = 'dot-badge-100';
+        badge100.style.left = leftPosCss;
+        badge100.style.bottom = `${currentBottom}px`;
+        badge100.innerText = `×${count100 * 100}`;
+        axis.appendChild(badge100);
+        currentBottom += 28;
+      }
+
+      // 10個まとめバッジ
+      if (count10 > 0) {
+        const badge10 = document.createElement('div');
+        badge10.className = 'dot-badge-10';
+        badge10.style.left = leftPosCss;
+        badge10.style.bottom = `${currentBottom}px`;
+        badge10.innerText = `×${count10 * 10}`;
+        axis.appendChild(badge10);
+        currentBottom += 24;
+      }
+
+      // 端数ドット
+      for (let d = 0; d < remainingDots; d++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot-mark';
+        dot.style.backgroundColor = color;
+        dot.style.left = leftPosCss;
+        dot.style.bottom = `${currentBottom}px`;
+        axis.appendChild(dot);
+        currentBottom += 8;
+      }
+    });
+  }
+
+  // Google Form URL編集
+  function toggleUrlEditor() {
+    const panel = document.getElementById('url-editor-panel');
+    panel.classList.toggle('hidden');
+  }
+
+  function updateFormUrl() {
+    const url = document.getElementById('custom-form-url').value;
+    document.getElementById('google-form-iframe').src = url;
+    toggleUrlEditor();
+  }
+</script>
+
+</body>
+</html>
