@@ -446,22 +446,49 @@
           <p class="text-[10px] text-indigo-600 mt-1.5">※Googleフォームの「送信」→「&lt;/&gt; 埋め込みHTML」からコピーしたsrc属性URLを貼り付けできます。入力内容は端末に自動保存されます。</p>
         </div>
 
-        <!-- Google Form 埋め込みコンテナ -->
-        <div id="google-form-container" class="w-full bg-slate-50 border-2 border-indigo-200 rounded-xl overflow-hidden min-h-[480px] flex items-center justify-center relative">
-          <!-- デフォルト表示プレビュー（URL未設定時） -->
-          <div id="form-placeholder" class="text-center p-6 text-slate-500">
-            <div class="text-4xl mb-2">📝</div>
-            <p class="font-black text-sm text-slate-700 mb-1">Google フォーム埋め込み表示エリア</p>
-            <p class="text-xs max-w-sm mx-auto mb-3">右上ボタンからクラス用フォームのURL（埋め込み用リンク）を登録すると、ここにGoogleフォームが直接表示されます。</p>
-            <button onclick="toggleFormConfig()" class="bg-indigo-600 text-white font-black text-xs px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition-all cursor-pointer">
-              GoogleフォームURLを今すぐ設定する
-            </button>
-          </div>
-
-          <!-- 実際のiframe -->
-          <iframe id="google-form-iframe" src="" class="w-full h-[520px] border-0 hidden" loading="lazy">読み込み中...</iframe>
-        </div>
+        <!-- 授業振り返り Google Form 埋め込みセクション -->
+  <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-indigo-900/50 shadow-xl space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-950 pb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">📋</span>
+        <h3 class="text-sm font-bold text-indigo-300">
+          授業振り返りフォーム
+        </h3>
       </div>
+
+      <div class="flex items-center gap-2">
+        <a id="form-external-link" href="https://forms.gle/incFAY12UQQR99Qa7" target="_blank" rel="noopener noreferrer" 
+           class="bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg border border-indigo-400/30 transition flex items-center gap-1 shadow">
+          <span>別タブで開く</span> ↗
+        </a>
+        <button onclick="toggleUrlEditor()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+          ⚙️ フォームURL変更
+        </button>
+      </div>
+    </div>
+
+    <!-- 先生用URL変更パネル (初期非表示) -->
+    <div id="url-editor-panel" class="hidden bg-slate-950/90 p-3 rounded-xl border border-indigo-500/40 space-y-2 text-xs">
+      <div class="font-bold text-indigo-200">🛠️ Google Form URLの設定 (先生用):</div>
+      <div class="flex gap-2">
+        <input type="text" id="custom-form-url" value="https://forms.gle/xvX7JdUKB8vfthT56" 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-400" placeholder="https://forms.gle/...">
+        <button onclick="updateFormUrl()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg transition whitespace-nowrap">
+          更新
+        </button>
+      </div>
+    </div>
+
+    <!-- 埋め込み iframe 表示領域 -->
+    <div class="w-full bg-slate-950 rounded-xl overflow-hidden border border-indigo-950 shadow-inner h-[550px]">
+      <iframe id="google-form-iframe" 
+              src="https://forms.gle/xvX7JdUKB8vfthT56" 
+              class="w-full h-full border-0" 
+              loading="lazy">
+        読み込み中...
+      </iframe>
+    </div>
+  </div>
 
       <!-- リセットボタン -->
       <div class="flex justify-center">
