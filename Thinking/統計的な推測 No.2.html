@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>どうぶつカード 10連パック比較 | 数学B 分散と標準偏差 (Chromebook最適化版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800;900&display=swap');
+
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 背景アニメーション光条 */
+    .bg-glow {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      background: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 45%);
+    }
+
+    /* パック切り離し＆破断アニメーション */
+    .pack-container {
+      perspective: 800px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .pack-card {
+      position: relative;
+      width: 140px;
+      height: 195px;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-style: preserve-3d;
+    }
+
+    .pack-container:hover .pack-card,
+    .pack-container:active .pack-card {
+      transform: scale(1.05) rotate(1deg);
+    }
+
+    .pack-top-tear {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 36px;
+      z-index: 10;
+      transition: transform 0.35s ease-out, opacity 0.35s ease-out;
+      transform-origin: top right;
+    }
+
+    .pack-opening .pack-top-tear {
+      transform: translateY(-26px) rotate(22deg) scale(0.9);
+      opacity: 0;
+    }
+
+    .laser-line {
+      position: absolute;
+      top: 34px;
+      left: -10%;
+      width: 120%;
+      height: 3px;
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8, 0 0 20px #0284c7;
+      opacity: 0;
+      z-index: 20;
+    }
+
+    .pack-opening .laser-line {
+      animation: laserSlash 0.35s ease-in-out forwards;
+    }
+
+    @keyframes laserSlash {
+      0% { opacity: 0; transform: scaleX(0); }
+      50% { opacity: 1; transform: scaleX(1); }
+      100% { opacity: 0; transform: scaleX(1); }
+    }
+
+    /* カードの展開・裏返りアニメーション */
+    .animal-card {
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+      opacity: 0;
+      transform: translateY(20px) scale(0.85);
+    }
+
+    .animal-card.revealed {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* ドットプロットスタイル (Chromebook用に高さ調整) */
+    .dot-plot-axis {
+      position: relative;
+      height: 130px;
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 2px solid #64748b;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .dot-mark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* ドットプロット軸エリア */
+    .dot-plot-axis {
+      position: relative;
+      height: 140px;
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 2px solid #64748b;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* 10個単位まとめバッジ (ゴールド丸型) */
+    .dot-badge-10 {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 100個単位まとめバッジ (豪華レインボー丸型) */
+    .dot-badge-100 {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #f43f5e, #fbbf24, #a855f7);
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 単品ドット */
+    .dot-mark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      transition: all 0.2s ease;
+    }
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="p-2 md:p-4 relative">
+
+<div class="bg-glow"></div>
+
+<div class="max-w-7xl mx-auto relative z-10 space-y-3">
+
+  <!-- ヘッダー（コンパクト横長レイアウト） -->
+  <header class="bg-slate-900/80 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-slate-800 shadow-lg flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl md:text-3xl">🐾</span>
+      <div>
+        <h1 class="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-indigo-300 leading-tight">
+          どうぶつ対戦 2026
+        </h1>
+        <p class="text-slate-400 text-xs font-bold">
+          数学B 統計的な推測
+        </p>
+      </div>
+    </div>
+
+    <!-- ルールまとめバッジ -->
+    <div class="flex items-center gap-1.5 text-xs font-extrabold bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-700/60">
+      <span class="text-amber-400">SSR: 400pt</span>
+      <span class="text-slate-500">|</span>
+      <span class="text-purple-400">SR: 250pt</span>
+      <span class="text-slate-500">|</span>
+      <span class="text-blue-400">R: 100pt</span>
+      <span class="text-slate-500">|</span>
+      <span class="text-slate-400">N: 0pt</span>
+    </div>
+  </header>
+
+  <!-- メインダッシュボード（Chromebook画面にフィットする2カラム構成） -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+
+    <!-- 左側カラム: パック選択＆10連開封（lg: 4/12） -->
+    <div class="lg:col-span-4 space-y-3">
+      
+      <!-- タブ切替 -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="tab-a" onclick="switchPack('A')" 
+          class="py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-emerald-500 bg-emerald-950/70 text-emerald-300 shadow-md">
+          <span>🌲</span> パック A
+        </button>
+        <button id="tab-b" onclick="switchPack('B')" 
+          class="py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-slate-700 bg-slate-800/40 text-slate-400 hover:border-cyan-500/50">
+          <span>🌊</span> パック B
+        </button>
+      </div>
+
+      <!-- 開封ステージ (コンパクト表示) -->
+      <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-xl flex flex-col items-center justify-center relative min-h-[230px]">
+        <div class="pack-container my-1" id="pack-container" onclick="openPack()">
+          <div class="pack-card" id="pack-card">
+            <div class="laser-line"></div>
+            
+            <!-- パック上部 -->
+            <div class="pack-top-tear bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 rounded-t-xl border-t-2 border-x-2 border-emerald-300 p-1.5 text-center" id="pack-top">
+              <div class="w-full border-b border-dashed border-white/60 pb-0.5"></div>
+            </div>
+
+            <!-- パック本体 -->
+            <div class="w-full h-full bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 rounded-xl border-2 border-emerald-400 shadow-xl p-3 flex flex-col justify-between items-center text-white relative overflow-hidden" id="pack-body">
+              <div class="mt-4 text-center">
+                <span class="text-[10px] bg-emerald-950/80 text-emerald-200 px-2 py-0.5 rounded-full font-bold border border-emerald-400/30">10枚封入</span>
+                <h2 class="text-sm font-black mt-1 text-amber-300 drop-shadow" id="pack-title">フォレスト・ブレイブ</h2>
+              </div>
+              <div class="text-4xl my-1 drop-shadow" id="pack-icon">🌲</div>
+              <div class="text-[10px] font-black bg-amber-400 text-slate-950 px-2.5 py-1 rounded-full shadow animate-bounce">
+                👆 クリック/タップ
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 確率内訳ミニガイド -->
+        <div class="w-full mt-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 text-[11px] space-y-1" id="pack-prob-info">
+          <div class="flex justify-between font-bold text-emerald-300 border-b border-slate-800 pb-1">
+            <span>🌲 パックA 排出確率:</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1 text-center text-slate-300 font-medium">
+            <span class="bg-amber-950/40 rounded py-0.5 border border-amber-500/20">SSR 3%</span>
+            <span class="bg-purple-950/40 rounded py-0.5 border border-purple-500/20">SR 20%</span>
+            <span class="bg-blue-950/40 rounded py-0.5 border border-blue-500/20">R 35%</span>
+            <span class="bg-slate-900 rounded py-0.5 border border-slate-700">N 42%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- データリセットボタン -->
+      <div class="flex justify-end">
+        <button onclick="resetData()" class="text-xs text-slate-400 hover:text-rose-300 bg-slate-800/60 hover:bg-rose-950/40 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1 font-bold">
+          🗑️ 蓄積データをクリア
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 右側カラム: 今回の10連開封結果 (5列×2行) （lg: 8/12） -->
+    <div class="lg:col-span-8">
+      <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl p-3 md:p-4 border border-slate-800 shadow-xl min-h-[350px] flex flex-col justify-between">
+        
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2">
+          <h2 class="text-sm md:text-base font-black text-slate-200 flex items-center gap-2">
+            <span>🎴 今回の10連カード獲得結果</span>
+            <span class="text-xs font-bold text-amber-300 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-500/30" id="current-pack-name">
+              パックA
+            </span>
+          </h2>
+          <div class="text-xs font-extrabold text-slate-300">
+            合計: <span class="text-amber-300 text-base font-black" id="current-pack-total">0</span> pt
+          </div>
+        </div>
+
+        <!-- 10枚のカード表示エリア (5列×2行 グリッド) -->
+        <div class="grid grid-cols-5 gap-2 my-auto min-h-[250px]" id="cards-grid">
+          <!-- 初期状態プレースホルダー -->
+          <div class="col-span-5 flex flex-col items-center justify-center text-slate-500 py-12 space-y-2">
+            <div class="text-4xl opacity-40">🎴</div>
+            <p class="text-xs font-bold">左のパックをタップして10連カードを開封しよう！</p>
+          </div>
+        </div>
+
+        <!-- 直近10連の簡易統計メッセージ -->
+        <div class="text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center mt-2">
+          <span>💡 10連1回のポイント合計期待値は <b>2,000 pt</b> です。今回の引きはどうだったかな？</span>
+          <span class="font-extrabold text-emerald-400" id="current-pack-eval">-</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 下部セクション: パックA vs パックB 統計比較 & ドットプロット -->
+  <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-xl space-y-4">
+    
+    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+      <h2 class="text-base md:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-amber-300 to-cyan-300 flex items-center gap-2">
+        <span>📊 累計データの比較分析（パックA vs パックB）</span>
+      </h2>
+      <span class="text-xs text-slate-400 font-bold">数学B: 平均・分散・標準偏差</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      
+      <!-- パックA 統計 -->
+      <div class="bg-emerald-950/30 rounded-xl p-3 border border-emerald-800/60 space-y-1.5">
+        <div class="flex justify-between items-center border-b border-emerald-800/40 pb-1.5">
+          <h3 class="font-black text-emerald-300 text-sm flex items-center gap-1.5">
+            <span>🌲 パック A</span>
+            <span class="text-[11px] font-normal text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-700/50" id="count-a">0回 (0枚)</span>
+          </h3>
+          <span class="text-xs text-emerald-200 font-bold" id="total-a">0 pt</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-emerald-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">平均 ($\bar{x}$)</span>
+            <span class="text-amber-300 font-black text-sm" id="mean-a">0.0</span> <span class="text-[10px] text-slate-400">pt</span>
+          </div>
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-emerald-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">分散 ($s^2$)</span>
+            <span class="text-emerald-200 font-bold text-sm" id="var-a">-</span>
+          </div>
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-emerald-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">標準偏差 ($s$)</span>
+            <span class="text-amber-300 font-black text-sm" id="sd-a">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- パックB 統計 -->
+      <div class="bg-cyan-950/30 rounded-xl p-3 border border-cyan-800/60 space-y-1.5">
+        <div class="flex justify-between items-center border-b border-cyan-800/40 pb-1.5">
+          <h3 class="font-black text-cyan-300 text-sm flex items-center gap-1.5">
+            <span>🌊 パック B</span>
+            <span class="text-[11px] font-normal text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-700/50" id="count-b">0回 (0枚)</span>
+          </h3>
+          <span class="text-xs text-cyan-200 font-bold" id="total-b">0 pt</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-cyan-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">平均 ($\bar{x}$)</span>
+            <span class="text-amber-300 font-black text-sm" id="mean-b">0.0</span> <span class="text-[10px] text-slate-400">pt</span>
+          </div>
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-cyan-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">分散 ($s^2$)</span>
+            <span class="text-cyan-200 font-bold text-sm" id="var-b">-</span>
+          </div>
+          <div class="bg-slate-900/80 p-1.5 rounded-lg border border-cyan-800/40">
+            <span class="text-[10px] text-slate-400 block font-bold">標準偏差 ($s$)</span>
+            <span class="text-amber-300 font-black text-sm" id="sd-b">-</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ドットプロット分布表示 (10個・100個まとめバッジ機能付き) -->
+    <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800 space-y-3">
+        <div class="flex justify-between items-center text-xs">
+        <span class="font-bold text-slate-300">📈 獲得カードのポイント分布（0 pt ～ 400 pt）</span>
+        <span class="text-[11px] text-amber-400/90 font-medium">※10個で「×10」、100個で「×100」バッジに合体します</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <!-- パックA 軸 -->
+        <div>
+            <div class="text-[11px] font-bold text-emerald-400 mb-1">🌲 パック A の分布:</div>
+            <div class="dot-plot-axis" id="axis-a">
+            <div class="absolute bottom-1 w-full flex justify-between px-2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                <span>0 pt</span>
+                <span>100 pt</span>
+                <span>200 pt</span>
+                <span>300 pt</span>
+                <span>400 pt</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- パックB 軸 -->
+    <div>
+      <div class="text-[11px] font-bold text-cyan-400 mb-1">🌊 パック B の分布:</div>
+      <div class="dot-plot-axis" id="axis-b">
+        <div class="absolute bottom-1 w-full flex justify-between px-2 text-[10px] font-bold text-slate-400 pointer-events-none">
+          <span>0 pt</span>
+          <span>100 pt</span>
+          <span>200 pt</span>
+          <span>300 pt</span>
+          <span>400 pt</span>
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
+
+</div>
+
+  <!-- 授業振り返り Google Form 埋め込みセクション -->
+  <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-indigo-900/50 shadow-xl space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-950 pb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">📋</span>
+        <h3 class="text-sm font-bold text-indigo-300">
+          授業振り返りフォーム
+        </h3>
+        <span class="text-[11px] text-slate-400">（分散・標準偏差の考察入力）</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a id="form-external-link" href="https://forms.gle/xvX7JdUKB8vfthT56" target="_blank" rel="noopener noreferrer" 
+           class="bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg border border-indigo-400/30 transition flex items-center gap-1 shadow">
+          <span>別タブで開く</span> ↗
+        </a>
+        <button onclick="toggleUrlEditor()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+          ⚙️ フォームURL変更
+        </button>
+      </div>
+    </div>
+
+    <!-- 先生用URL変更パネル (初期非表示) -->
+    <div id="url-editor-panel" class="hidden bg-slate-950/90 p-3 rounded-xl border border-indigo-500/40 space-y-2 text-xs">
+      <div class="font-bold text-indigo-200">🛠️ Google Form URLの設定 (先生用):</div>
+      <div class="flex gap-2">
+        <input type="text" id="custom-form-url" value="https://forms.gle/xvX7JdUKB8vfthT56" 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-400" placeholder="https://forms.gle/...">
+        <button onclick="updateFormUrl()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg transition whitespace-nowrap">
+          更新
+        </button>
+      </div>
+    </div>
+
+    <!-- 埋め込み iframe 表示領域 -->
+    <div class="w-full bg-slate-950 rounded-xl overflow-hidden border border-indigo-950 shadow-inner h-[550px]">
+      <iframe id="google-form-iframe" 
+              src="https://forms.gle/xvX7JdUKB8vfthT56" 
+              class="w-full h-full border-0" 
+              loading="lazy">
+        読み込み中...
+      </iframe>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // レアリティ別ポイント設定
+  const RARITY_POINTS = {
+    SSR: 400,
+    SR: 250,
+    R: 100,
+    N: 0
+  };
+
+  // パックA カードプール（SSR 15%, SR 40%, R 40%, N 5% -> 期待値 200pt, 分散 13,000）
+  const CARDS_PACK_A = [
+    {
+      rarity: 'SSR', name: '虹色ゴールデンうさぎ', pt: 400, prob: 0.03,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#fef08a"/><path d="M35 15 Q30 45 42 50 Q48 45 42 15 Z" fill="#facc15"/><path d="M65 15 Q70 45 58 50 Q52 45 58 15 Z" fill="#facc15"/><circle cx="50" cy="60" r="22" fill="#fff"/><circle cx="42" cy="55" r="4" fill="#1e293b"/><circle cx="58" cy="55" r="4" fill="#1e293b"/><polygon points="50,60 46,65 54,65" fill="#f43f5e"/></svg>`
+    },
+    {
+      rarity: 'SR', name: 'マジキツネ', pt: 250, prob: 0.20,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#fed7aa"/><polygon points="50,25 25,70 75,70" fill="#f97316"/><polygon points="50,30 32,65 68,65" fill="#ffedd5"/><circle cx="42" cy="52" r="3" fill="#1e293b"/><circle cx="58" cy="52" r="3" fill="#1e293b"/><polygon points="50,58 46,62 54,62" fill="#1e293b"/><polygon points="50,10 35,30 65,30" fill="#8b5cf6"/></svg>`
+    },
+    {
+      rarity: 'R', name: 'どんぐりリス', pt: 100, prob: 0.35,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#bfdbfe"/><circle cx="50" cy="55" r="25" fill="#3b82f6"/><circle cx="35" cy="25" r="12" fill="#1d4ed8"/><circle cx="65" cy="25" r="12" fill="#1d4ed8"/><circle cx="43" cy="50" r="3" fill="#fff"/><circle cx="57" cy="50" r="3" fill="#fff"/><ellipse cx="50" cy="58" rx="5" ry="3" fill="#93c5fd"/></svg>`
+    },
+    {
+      rarity: 'N', name: 'おやゆびパンダ', pt: 0, prob: 0.42,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#f1f5f9"/><circle cx="28" cy="28" r="12" fill="#334155"/><circle cx="72" cy="28" r="12" fill="#334155"/><circle cx="50" cy="58" r="22" fill="#fff"/><ellipse cx="40" cy="52" rx="6" ry="8" fill="#334155"/><ellipse cx="60" cy="52" rx="6" ry="8" fill="#334155"/><circle cx="41" cy="52" r="2" fill="#fff"/><circle cx="59" cy="52" r="2" fill="#fff"/><ellipse cx="50" cy="62" rx="4" ry="3" fill="#334155"/></svg>`
+    }
+  ];
+
+  // パックB カードプール（SSR 45%, SR 0%, R 20%, N 35% -> 期待値 200pt, 分散 34,000）
+  const CARDS_PACK_B = [
+    {
+      rarity: 'SSR', name: 'ドヤ顔ドラゴン', pt: 400, prob: 0.09,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#fbcfe8"/><path d="M20 40 Q50 10 80 40 Q50 90 20 40 Z" fill="#06b6d4"/><polygon points="30,20 40,35 20,35" fill="#facc15"/><polygon points="70,20 60,35 80,35" fill="#facc15"/><circle cx="40" cy="45" r="4" fill="#e11d48"/><circle cx="60" cy="45" r="4" fill="#e11d48"/><path d="M45 60 Q50 65 55 60" stroke="#1e293b" stroke-width="3" fill="none"/></svg>`
+    },
+    {
+      rarity: 'SR', name: '情熱クラゲ', pt: 250, prob: 0.10,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#e9d5ff"/><path d="M25 50 Q50 20 75 50 Z" fill="#a855f7"/><circle cx="42" cy="42" r="3" fill="#fff"/><circle cx="58" cy="42" r="3" fill="#fff"/><path d="M32 50 Q30 75 35 80 M44 50 Q42 75 46 82 M56 50 Q58 75 54 82 M68 50 Q70 75 65 80" stroke="#c084fc" stroke-width="3" fill="none"/><polygon points="50,15 45,28 55,28" fill="#facc15"/></svg>`
+    },
+    {
+      rarity: 'R', name: 'シャチキャプテン', pt: 100, prob: 0.18,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#a5f3fc"/><ellipse cx="50" cy="55" rx="30" ry="20" fill="#0f172a"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#fff"/><circle cx="40" cy="50" r="3" fill="#fff"/><polygon points="50,15 30,35 70,35" fill="#ef4444"/></svg>`
+    },
+    {
+      rarity: 'N', name: 'まいごのペンギン', pt: 0, prob: 0.63,
+      svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#cbd5e1"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="#1e293b"/><ellipse cx="50" cy="58" rx="16" ry="20" fill="#fff"/><circle cx="42" cy="48" r="3" fill="#1e293b"/><circle cx="58" cy="48" r="3" fill="#1e293b"/><polygon points="50,52 45,58 55,58" fill="#f97316"/></svg>`
+    }
+  ];
+
+  let currentPack = 'A';
+  let isOpening = false;
+
+  const packData = {
+    A: { history: [], totalPt: 0 },
+    B: { history: [], totalPt: 0 }
+  };
+
+  // パック切替機能
+  function switchPack(packType) {
+    if (isOpening) return;
+    currentPack = packType;
+
+    const tabA = document.getElementById('tab-a');
+    const tabB = document.getElementById('tab-b');
+    const packTop = document.getElementById('pack-top');
+    const packBody = document.getElementById('pack-body');
+    const packTitle = document.getElementById('pack-title');
+    const packIcon = document.getElementById('pack-icon');
+    const packProbInfo = document.getElementById('pack-prob-info');
+
+    if (packType === 'A') {
+      tabA.className = "py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-emerald-500 bg-emerald-950/70 text-emerald-300 shadow-md";
+      tabB.className = "py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-slate-700 bg-slate-800/40 text-slate-400 hover:border-cyan-500/50";
+      
+      packTop.className = "pack-top-tear bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 rounded-t-xl border-t-2 border-x-2 border-emerald-300 p-1.5 text-center";
+      packBody.className = "w-full h-full bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 rounded-xl border-2 border-emerald-400 shadow-xl p-3 flex flex-col justify-between items-center text-white relative overflow-hidden";
+      packTitle.innerText = "フォレスト・ブレイブ";
+      packIcon.innerText = "🌲";
+
+      packProbInfo.innerHTML = `
+        <div class="flex justify-between font-bold text-emerald-300 border-b border-slate-800 pb-1">
+          <span>🌲 パックA 排出確率設定:</span>
+          <span class="text-amber-300">理論分散: 13,000 (SD ≈ 114.0)</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1 text-center text-slate-300 font-medium">
+          <span class="bg-amber-950/40 rounded py-0.5 border border-amber-500/20">SSR 15%</span>
+          <span class="bg-purple-950/40 rounded py-0.5 border border-purple-500/20">SR 40%</span>
+          <span class="bg-blue-950/40 rounded py-0.5 border border-blue-500/20">R 40%</span>
+          <span class="bg-slate-900 rounded py-0.5 border border-slate-700">N 5%</span>
+        </div>
+      `;
+    } else {
+      tabA.className = "py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-slate-700 bg-slate-800/40 text-slate-400 hover:border-emerald-500/50";
+      tabB.className = "py-2.5 px-3 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-1.5 border-2 border-cyan-500 bg-cyan-950/70 text-cyan-300 shadow-md";
+      
+      packTop.className = "pack-top-tear bg-gradient-to-r from-cyan-500 via-sky-400 to-cyan-600 rounded-t-xl border-t-2 border-x-2 border-cyan-300 p-1.5 text-center";
+      packBody.className = "w-full h-full bg-gradient-to-br from-cyan-600 via-sky-700 to-cyan-900 rounded-xl border-2 border-cyan-400 shadow-xl p-3 flex flex-col justify-between items-center text-white relative overflow-hidden";
+      packTitle.innerText = "オーシャン・レジェンズ";
+      packIcon.innerText = "🌊";
+
+      packProbInfo.innerHTML = `
+        <div class="flex justify-between font-bold text-cyan-300 border-b border-slate-800 pb-1">
+          <span>🌊 パックB 排出確率:</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1 text-center text-slate-300 font-medium">
+          <span class="bg-amber-950/40 rounded py-0.5 border border-amber-500/20">SSR 9%</span>
+          <span class="bg-purple-950/40 rounded py-0.5 border border-purple-500/20">SR 10%</span>
+          <span class="bg-blue-950/40 rounded py-0.5 border border-blue-500/20">R 18%</span>
+          <span class="bg-slate-900 rounded py-0.5 border border-slate-700">N 63%</span>
+        </div>
+      `;
+    }
+  }
+
+  // 単品抽選ロジック
+  function drawCard(packType) {
+    const pool = packType === 'A' ? CARDS_PACK_A : CARDS_PACK_B;
+    const rand = Math.random();
+    let cumulative = 0;
+
+    for (let card of pool) {
+      cumulative += card.prob;
+      if (rand <= cumulative) {
+        return card;
+      }
+    }
+    return pool[pool.length - 1];
+  }
+
+  // 10連パック開封アクション
+  function openPack() {
+    if (isOpening) return;
+    isOpening = true;
+
+    const packCard = document.getElementById('pack-card');
+    const grid = document.getElementById('cards-grid');
+    grid.innerHTML = '';
+
+    packCard.classList.add('pack-opening');
+
+    setTimeout(() => {
+      packCard.classList.remove('pack-opening');
+
+      const drawnCards = [];
+      let current10Total = 0;
+
+      for (let i = 0; i < 10; i++) {
+        const card = drawCard(currentPack);
+        drawnCards.push(card);
+        current10Total += card.pt;
+        packData[currentPack].history.push(card.pt);
+        packData[currentPack].totalPt += card.pt;
+      }
+
+      // 画面テキスト更新
+      document.getElementById('current-pack-name').innerText = currentPack === 'A' ? '🌲 パック A' : '🌊 パック B';
+      document.getElementById('current-pack-total').innerText = current10Total.toLocaleString();
+
+      const diff = current10Total - 2000;
+      const evalText = diff > 0 ? `🎉 期待値より +${diff} pt アップ！` : (diff === 0 ? '✨ ピッタリ理論期待値！' : `📉 期待値より ${diff} pt`);
+      document.getElementById('current-pack-eval').innerText = evalText;
+
+      // 10枚カード生成（5列×2行コンパクトデザイン）
+      drawnCards.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        let rarityBg = "bg-slate-700 text-slate-200";
+        if (card.rarity === 'SSR') rarityBg = "bg-amber-400 text-slate-950 font-black shadow shadow-amber-500/40";
+        else if (card.rarity === 'SR') rarityBg = "bg-purple-500 text-white font-black";
+        else if (card.rarity === 'R') rarityBg = "bg-blue-500 text-white font-bold";
+
+        cardEl.className = "animal-card bg-slate-800/90 rounded-xl p-2 border border-slate-700 shadow flex flex-col items-center justify-between relative overflow-hidden min-h-[115px]";
+        cardEl.innerHTML = `
+          <div class="absolute top-1 left-1 text-[9px] px-1.5 py-0.2 rounded-full ${rarityBg}">${card.rarity}</div>
+          <div class="w-10 h-10 my-1">${card.svg}</div>
+          <div class="text-[10px] font-bold text-center text-slate-200 line-clamp-1 mb-0.5">${card.name}</div>
+          <div class="text-xs font-extrabold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/20">+${card.pt}pt</div>
+        `;
+        grid.appendChild(cardEl);
+
+        setTimeout(() => {
+          cardEl.classList.add('revealed');
+        }, index * 50);
+      });
+
+      updateStats();
+
+      setTimeout(() => {
+        isOpening = false;
+      }, 600);
+
+    }, 380);
+  }
+
+  // 統計量およびドットプロット更新
+  function updateStats() {
+    ['A', 'B'].forEach(type => {
+      const history = packData[type].history;
+      const count = history.length;
+      const total = packData[type].totalPt;
+
+      const lowerType = type.toLowerCase();
+      document.getElementById(`count-${lowerType}`).innerText = `${count / 10}回 (${count}枚)`;
+      document.getElementById(`total-${lowerType}`).innerText = `${total.toLocaleString()} pt`;
+
+      if (count === 0) {
+        document.getElementById(`mean-${lowerType}`).innerText = `0.0`;
+        document.getElementById(`var-${lowerType}`).innerText = `-`;
+        document.getElementById(`sd-${lowerType}`).innerText = `-`;
+        return;
+      }
+
+      const mean = total / count;
+      document.getElementById(`mean-${lowerType}`).innerText = mean.toFixed(1);
+
+      const variance = history.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / count;
+      const sd = Math.sqrt(variance);
+
+      document.getElementById(`var-${lowerType}`).innerText = variance.toLocaleString(undefined, {maximumFractionDigits: 1});
+      document.getElementById(`sd-${lowerType}`).innerText = sd.toFixed(1);
+
+      renderDotPlot(type, history);
+    });
+  }
+
+// ドットプロット描画（バッジ数値まとめ＋絶対はみ出さない高さ計算）
+  function renderDotPlot(type, history) {
+    const axis = document.getElementById(`axis-${type.toLowerCase()}`);
+    if (!axis) return;
+
+    // 既存のドット・バッジをクリア
+    axis.querySelectorAll('.dot-mark, .dot-badge-10, .dot-badge-100').forEach(el => el.remove());
+
+    const counts = {};
+    history.forEach(pt => {
+      counts[pt] = (counts[pt] || 0) + 1;
+    });
+
+    Object.keys(counts).forEach(ptStr => {
+      const pt = Number(ptStr);
+      const totalCount = counts[pt];
+
+      // 100個単位、10個単位、端数の計算
+      const count100 = Math.floor(totalCount / 100);
+      const remainder100 = totalCount % 100;
+      const count10 = Math.floor(remainder100 / 10);
+      const remainingDots = remainder100 % 10;
+
+      // X軸の位置計算（両端24pxのマージンを確保して枠内収め）
+      const leftPosCss = `calc(24px + (100% - 48px) * (${pt} / 400))`;
+      const dotBg = type === 'A' ? '#10b981' : '#06b6d4';
+
+      let currentBottom = 20; // 軸の直上からの積み上げ高さ(px)
+
+      // ① 100個以上のまとめバッジ（例: ×100, ×200）
+      if (count100 > 0) {
+        const badge100 = document.createElement('div');
+        badge100.className = 'dot-badge-100';
+        badge100.style.left = leftPosCss;
+        badge100.style.bottom = `${currentBottom}px`;
+        badge100.innerText = `×${count100 * 100}`;
+        axis.appendChild(badge100);
+        currentBottom += 28;
+      }
+
+      // ② 10個以上のまとめバッジ（例: ×10, ×50）
+      if (count10 > 0) {
+        const badge10 = document.createElement('div');
+        badge10.className = 'dot-badge-10';
+        badge10.style.left = leftPosCss;
+        badge10.style.bottom = `${currentBottom}px`;
+        badge10.innerText = `×${count10 * 10}`;
+        axis.appendChild(badge10);
+        currentBottom += 24;
+      }
+
+      // ③ 端数ドットの描画（最大9個）
+      for (let d = 0; d < remainingDots; d++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot-mark';
+        dot.style.backgroundColor = dotBg;
+        dot.style.left = leftPosCss;
+        dot.style.bottom = `${currentBottom}px`;
+        axis.appendChild(dot);
+        currentBottom += 8; // ドット同士のコンパクトな間隔
+      }
+    });
+  }
+
+  // データリセット機能
+  function resetData() {
+    if (packData.A.history.length === 0 && packData.B.history.length === 0) return;
+    
+    packData.A = { history: [], totalPt: 0 };
+    packData.B = { history: [], totalPt: 0 };
+    
+    document.getElementById('cards-grid').innerHTML = `
+      <div class="col-span-5 flex flex-col items-center justify-center text-slate-500 py-12 space-y-2">
+        <div class="text-4xl opacity-40">🎴</div>
+        <p class="text-xs font-bold">データをクリアしました。パックを開封して探究を開始しよう！</p>
+      </div>
+    `;
+    document.getElementById('current-pack-total').innerText = '0';
+    document.getElementById('current-pack-eval').innerText = '-';
+
+    updateStats();
+  }
+</script>
+
+</body>
+</html>
