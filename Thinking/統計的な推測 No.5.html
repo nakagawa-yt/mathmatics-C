@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏀 フリースロー・チャレンジ 🎯 二項分布ステージアドベンチャー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap');
+
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      user-select: none;
+    }
+
+    /* ゲージアニメーション */
+    .gauge-container {
+      position: relative;
+      width: 100%;
+      height: 48px;
+      background: #1e293b;
+      border-radius: 9999px;
+      overflow: hidden;
+      border: 3px solid #334155;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .target-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+      border-left: 2px solid #a7f3d0;
+      border-right: 2px solid #a7f3d0;
+    }
+
+    .gauge-needle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: #f43f5e;
+      border-radius: 3px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 10px #f43f5e, 0 0 20px #f43f5e;
+      z-index: 20;
+    }
+
+    /* ステージカード */
+    .stage-card {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .stage-card.unlocked:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ボール軌道Canvas */
+    #courtCanvas {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 60%, #1e293b 60%, #0f172a 100%);
+      border-radius: 16px;
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="p-3 md:p-6 pb-12">
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- ヘッダー -->
+  <header class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 text-white flex items-center justify-center text-2xl font-black shadow-md shadow-amber-500/20">
+        🏀
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-black text-slate-800">
+          フリースロー・チャレンジ 🎯 
+        </h1>
+        <p class="text-xs text-slate-500 font-bold mt-0.5">
+          1セット完走して次のステージを開放しよう！確率 $p$ やゾーンの変化で結果はどう変わる？
+        </p>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button onclick="resetAllApp()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-xs text-slate-700 hover:text-rose-600 font-bold transition flex items-center gap-1.5">
+        <i class="fa-solid fa-rotate-left"></i> 全リセット
+      </button>
+    </div>
+  </header>
+
+  <!-- STEP 1: ステージ選択グリッド -->
+  <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-black">1</span>
+        ステージを選択（1セットクリアで次が開放！）
+      </h2>
+      <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200" id="current-stage-badge">
+        選択中: Stage 1
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="stage-grid">
+      <!-- JSでカード生成 -->
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 左カラム: ゲーム＆操作パネル (lg: 6/12) -->
+    <div class="lg:col-span-6 space-y-6">
+
+      <!-- シュート操作エリア -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Shooting Court</span>
+            <h3 class="text-base font-black text-slate-800" id="active-stage-title">Stage 1: ビギナーズ・リング</h3>
+          </div>
+
+          <!-- 1セットの試行回数 n 選択 -->
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+            <span class="text-slate-500 px-1 text-[11px]">1セット:</span>
+            <button onclick="setN(5)" id="btn-n-5" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-black transition">5本</button>
+            <button onclick="setN(10)" id="btn-n-10" class="px-2.5 py-1 rounded-lg bg-white shadow-sm text-indigo-600 font-black transition">10本</button>
+            <button onclick="setN(20)" id="btn-n-20" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-black transition">20本</button>
+          </div>
+        </div>
+
+        <!-- Canvas アニメーション -->
+        <div class="relative">
+          <canvas id="courtCanvas" width="500" height="200" class="w-full h-[180px] shadow-inner"></canvas>
+          <div id="shotResultOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+            <span id="shotResultText" class="text-4xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">SUCCESS!</span>
+          </div>
+        </div>
+
+        <!-- タイミングゲージ -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-600">
+            <span>🎯 タイミングメーター</span>
+            <span class="text-emerald-600 font-black" id="target-prob-text">成功確率 p ≈ 50%</span>
+          </div>
+
+          <div class="gauge-container" id="gauge-container">
+            <!-- ターゲットゾーン（JSで動的生成） -->
+            <div id="gauge-needle" class="gauge-needle" style="left: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- アクションボタン -->
+        <div class="pt-2">
+          <button id="shootBtn" onclick="shootBall()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-lg shadow-lg shadow-orange-500/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-basketball text-2xl animate-bounce"></i> シュートを打つ！ (スペースキー / タップ)
+          </button>
+        </div>
+
+        <!-- 現在のセット進行状況 (○/×マーク) -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-slate-700">現在のセット進捗:</span>
+            <span class="text-indigo-600 font-black text-sm">
+              <span id="set-current-shots">0</span> / <span id="set-total-shots">10</span> 本目
+            </span>
+          </div>
+
+          <!-- ○/× アイコン列 -->
+          <div class="flex flex-wrap gap-1.5 justify-center min-h-[32px] items-center" id="shot-history-dots">
+            <!-- JS生成 -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 右カラム: 統計分析 & 二項分布グラフ (lg: 6/12) -->
+    <div class="lg:col-span-6 space-y-6">
+
+      <!-- 1セット完了時のカード通知 -->
+      <section id="set-complete-card" class="hidden bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-5 border border-indigo-500 shadow-xl space-y-3 animate-fade-in">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black uppercase tracking-widest text-amber-400">🎉 Set Completed!</span>
+          <span id="rarity-badge" class="px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow">
+            GOOD!
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <div class="text-xs text-indigo-200 font-bold">1セット結果</div>
+            <div class="text-2xl font-black text-white">
+              <span id="res-n">10</span> 本中 <span id="res-k" class="text-3xl text-amber-300">7</span> 本成功！
+            </div>
+            <div class="text-xs text-indigo-300 mt-1" id="res-prob-eval">
+              この成功数（以上）が起きる確率: 約 <b>4.2%</b>
+            </div>
+          </div>
+
+          <button id="next-stage-btn" onclick="proceedToNextStage()" class="py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-lg transition flex items-center gap-2 whitespace-nowrap">
+            <span>次のステージへ</span> <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- 統計グラフダッシュボード -->
+      <section class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-black">2</span>
+            実験データ vs 理論上の二項分布 B(n, p)
+          </h2>
+          <span class="text-xs text-slate-500 font-bold">プレイ数: <b id="total-sets-count" class="text-indigo-600">0</b> セット</span>
+        </div>
+
+        <!-- 統計指標サマリー -->
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] font-bold text-slate-400">平均成功数 (X̄)</div>
+            <div class="text-base font-black text-indigo-600" id="stat-exp-mean">0.0 本</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] font-bold text-slate-400">理論上の期待値 E[X] = np</div>
+            <div class="text-base font-black text-emerald-600" id="stat-theo-mean">5.0 本</div>
+          </div>
+        </div>
+
+        <!-- Chart.js グラフ -->
+        <div class="relative h-[220px] w-full">
+          <canvas id="binomialChart"></canvas>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // ステージ定義
+  const STAGES = [
+    {
+      id: 1,
+      name: 'Stage 1: ビギナーズ・リング',
+      icon: '🐣',
+      prob: 0.50,
+      speed: 1.0,
+      desc: '中央のワイドゾーン（成功率 約50%）',
+      zones: [{ start: 25, width: 50 }]
+    },
+    {
+      id: 2,
+      name: 'Stage 2: 偏向ナローゾーン',
+      icon: '🔥',
+      prob: 0.30,
+      speed: 1.25,
+      desc: '端に寄った狭いゾーン（成功率 約30%）',
+      zones: [{ start: 60, width: 30 }]
+    },
+    {
+      id: 3,
+      name: 'Stage 3: 2分割ダブルターゲット',
+      icon: '⚡',
+      prob: 0.20,
+      speed: 1.5,
+      desc: '2箇所に分かれたゾーン（合計 約20%）',
+      zones: [{ start: 15, width: 10 }, { start: 75, width: 10 }]
+    },
+    {
+      id: 4,
+      name: 'Stage 4: 高速トリプルスポット',
+      icon: '🎯',
+      prob: 0.15,
+      speed: 1.8,
+      desc: '高速移動＆3分割（合計 約15%）',
+      zones: [{ start: 10, width: 5 }, { start: 47.5, width: 5 }, { start: 85, width: 5 }]
+    },
+    {
+      id: 5,
+      name: 'Stage 5: 奇跡のピンポイント',
+      icon: '👑',
+      prob: 0.10,
+      speed: 2.2,
+      desc: '極小ピンポイント（合計 約10%）',
+      zones: [{ start: 20, width: 5 }, { start: 75, width: 5 }]
+    }
+  ];
+
+  // アプリ状態
+  let currentStageId = 1;
+  let maxUnlockedStage = 1; // 進行状況
+  let n = 10; // 1セットの試行数
+  let currentShotCount = 0;
+  let currentSetHits = 0;
+  let shotHistory = []; // 今回のセットの○/×
+  let stageSetRecords = { 1: [], 2: [], 3: [], 4: [], 5: [] }; // 各ステージのセット結果記録
+
+  // ゲージアニメーション状態
+  let needlePos = 0;
+  let needleDirection = 1;
+  let isShooting = false;
+  let animationFrameId = null;
+
+  // Chart.js インスタンス
+  let chartInstance = null;
+
+  // Web Audio API
+  function playAudio(type) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'tick') {
+        osc.frequency.value = 400;
+        gain.gain.setValueAtTime(0.02, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.03);
+      } else if (type === 'swish') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } else if (type === 'rim') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      } else if (type === 'unlock') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    } catch(e) {}
+  }
+
+  // 初期化
+  window.addEventListener('DOMContentLoaded', () => {
+    initChart();
+    renderStageGrid();
+    loadStage(1);
+    startGaugeAnimation();
+
+    // キーボード操作（スペースキーでシュート）
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        shootBall();
+      }
+    });
+  });
+
+  // ステージ選択カードの描画
+  function renderStageGrid() {
+    const grid = document.getElementById('stage-grid');
+    grid.innerHTML = '';
+
+    STAGES.forEach(st => {
+      const isUnlocked = st.id <= maxUnlockedStage;
+      const isCurrent = st.id === currentStageId;
+
+      const card = document.createElement('div');
+      card.className = `stage-card rounded-xl p-3.5 border text-left cursor-pointer transition ${
+        isCurrent
+          ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 shadow-md'
+          : isUnlocked
+          ? 'bg-slate-50 border-slate-200 hover:bg-white text-slate-800 unlocked'
+          : 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed text-slate-400'
+      }`;
+
+      card.innerHTML = `
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-lg">${st.icon}</span>
+          <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${
+            isUnlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+          }">
+            ${isUnlocked ? (isCurrent ? '選択中' : '開放済み') : '🔒 未開放'}
+          </span>
+        </div>
+        <div class="text-xs font-black mb-0.5">${st.name}</div>
+        <div class="text-[10px] font-medium leading-tight ${isUnlocked ? 'text-slate-500' : 'text-slate-400'}">
+          ${st.desc}
+        </div>
+      `;
+
+      if (isUnlocked) {
+        card.onclick = () => selectStage(st.id);
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ステージ切り替え
+  function selectStage(stageId) {
+    if (stageId > maxUnlockedStage) return;
+    currentStageId = stageId;
+    loadStage(stageId);
+    renderStageGrid();
+  }
+
+  // ステージロード
+  function loadStage(stageId) {
+    const st = STAGES.find(s => s.id === stageId);
+    document.getElementById('active-stage-title').innerText = st.name;
+    document.getElementById('current-stage-badge').innerText = `選択中: ${st.name.split(':')[0]}`;
+    document.getElementById('target-prob-text').innerText = `成功確率 p ≈ ${Math.round(st.prob * 100)}%`;
+
+    // ゲージターゲットゾーン構築
+    const gauge = document.getElementById('gauge-container');
+    gauge.querySelectorAll('.target-zone').forEach(el => el.remove());
+
+    st.zones.forEach(z => {
+      const zoneEl = document.createElement('div');
+      zoneEl.className = 'target-zone';
+      zoneEl.style.left = `${z.start}%`;
+      zoneEl.style.width = `${z.width}%`;
+      gauge.appendChild(zoneEl);
+    });
+
+    // セットリセット
+    resetSetProgress();
+    updateChart();
+    drawCourtCanvas('idle');
+  }
+
+  // 1セットの試行数 n 変更
+  function setN(newN) {
+    n = newN;
+    [5, 10, 20].forEach(val => {
+      const btn = document.getElementById(`btn-n-${val}`);
+      if (val === n) {
+        btn.className = 'px-2.5 py-1 rounded-lg bg-white shadow-sm text-indigo-600 font-black transition';
+      } else {
+        btn.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-black transition';
+      }
+    });
+
+    resetSetProgress();
+    updateChart();
+  }
+
+  // ゲージ移動ループ
+  function startGaugeAnimation() {
+    const st = STAGES.find(s => s.id === currentStageId);
+    const speed = (st ? st.speed : 1.0) * 1.2;
+
+    function animate() {
+      if (!isShooting) {
+        needlePos += needleDirection * speed;
+        if (needlePos >= 100) {
+          needlePos = 100;
+          needleDirection = -1;
+        } else if (needlePos <= 0) {
+          needlePos = 0;
+          needleDirection = 1;
+        }
+        document.getElementById('gauge-needle').style.left = `${needlePos}%`;
+      }
+      animationFrameId = requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  // シュートを打つ
+  function shootBall() {
+    if (isShooting) return;
+    isShooting = true;
+    document.getElementById('shootBtn').disabled = true;
+
+    const st = STAGES.find(s => s.id === currentStageId);
+
+    // 判定（針の位置がターゲットゾーン内か）
+    let isHit = false;
+    for (let z of st.zones) {
+      if (needlePos >= z.start && needlePos <= (z.start + z.width)) {
+        isHit = true;
+        break;
+      }
+    }
+
+    currentShotCount++;
+    if (isHit) currentSetHits++;
+    shotHistory.push(isHit);
+
+    // ビジュアル＆音響演出
+    playAudio(isHit ? 'swish' : 'rim');
+    animateShotCanvas(isHit, () => {
+      renderShotDots();
+      document.getElementById('set-current-shots').innerText = currentShotCount;
+
+      // 1セット完了判定！
+      if (currentShotCount >= n) {
+        onSetComplete();
+      } else {
+        // 次のシュートへ
+        setTimeout(() => {
+          isShooting = false;
+          document.getElementById('shootBtn').disabled = false;
+        }, 300);
+      }
+    });
+  }
+
+  // シュートアニメーション (Canvas)
+  function animateShotCanvas(isHit, callback) {
+    const canvas = document.getElementById('courtCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('shotResultOverlay');
+    const textEl = document.getElementById('shotResultText');
+
+    let startTime = null;
+    const duration = 600; // ms
+
+    const startX = 60;
+    const startY = 130;
+    const hoopX = 420;
+    const hoopY = 70;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min(1, (timestamp - startTime) / duration);
+
+      // 放物線計算
+      const currentX = startX + (hoopX - startX) * progress;
+      const arcY = Math.sin(progress * Math.PI) * 90;
+      const currentY = startY + (hoopY - startY) * progress - arcY;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCourtCanvasState(ctx, currentX, currentY);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        // 結果テキストのポップ表示
+        if (isHit) {
+          textEl.innerText = 'SWISH!! ⭕';
+          textEl.className = 'text-3xl font-black text-emerald-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] animate-bounce';
+        } else {
+          textEl.innerText = 'MISS... ❌';
+          textEl.className = 'text-3xl font-black text-rose-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]';
+        }
+
+        overlay.style.opacity = '1';
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          callback();
+        }, 400);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  // Canvas 背景＆コート描画
+  function drawCourtCanvasState(ctx, ballX = null, ballY = null) {
+    ctx.clearRect(0, 0, 500, 200);
+
+    // バックボード & リング
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(440, 30, 8, 60); // ボード
+
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(415, 75);
+    ctx.lineTo(440, 75); // リング
+    ctx.stroke();
+
+    // ネット
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(418, 75);
+    ctx.lineTo(423, 95);
+    ctx.lineTo(434, 95);
+    ctx.lineTo(437, 75);
+    ctx.stroke();
+
+    // プレイヤー（簡易シルエット）
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(60, 120, 10, 0, Math.PI * 2); // 頭
+    ctx.fill();
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(54, 130, 12, 25); // 体
+
+    // ボール位置
+    if (ballX !== null && ballY !== null) {
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  function drawCourtCanvas(mode) {
+    const canvas = document.getElementById('courtCanvas');
+    const ctx = canvas.getContext('2d');
+    drawCourtCanvasState(ctx, 70, 115);
+  }
+
+  // 進捗ドット (○/×) の更新
+  function renderShotDots() {
+    const container = document.getElementById('shot-history-dots');
+    container.innerHTML = '';
+
+    for (let i = 0; i < n; i++) {
+      const dot = document.createElement('div');
+      if (i < shotHistory.length) {
+        const isHit = shotHistory[i];
+        dot.className = `w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shadow-sm ${
+          isHit ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+        }`;
+        dot.innerText = isHit ? '〇' : '✕';
+      } else {
+        dot.className = 'w-7 h-7 rounded-full border-2 border-dashed border-slate-300 bg-white';
+      }
+      container.appendChild(dot);
+    }
+  }
+
+  // 1セット完了時の処理
+  function onSetComplete() {
+    // 記録追加
+    stageSetRecords[currentStageId].push(currentSetHits);
+
+    // 次のステージの開放チェック
+    if (currentStageId === maxUnlockedStage && maxUnlockedStage < STAGES.length) {
+      maxUnlockedStage++;
+      playAudio('unlock');
+    }
+
+    renderStageGrid();
+
+    // 珍しさ判定 (二項分布の理論確率)
+    const st = STAGES.find(s => s.id === currentStageId);
+    const probK = calcBinomialProb(n, currentSetHits, st.prob);
+
+    let rareLabel = 'NORMAL (標準的)';
+    let badgeClass = 'bg-slate-200 text-slate-800';
+
+    if (probK < 0.03) {
+      rareLabel = 'UR (超激レア!! 奇跡)';
+      badgeClass = 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg animate-pulse';
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    } else if (probK < 0.10) {
+      rareLabel = 'SSR (かなり珍しい！)';
+      badgeClass = 'bg-amber-500 text-slate-950 shadow-md';
+      confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+    } else if (probK < 0.25) {
+      rareLabel = 'SR (やや珍しい)';
+      badgeClass = 'bg-indigo-500 text-white';
+    }
+
+    // カード表示更新
+    document.getElementById('res-n').innerText = n;
+    document.getElementById('res-k').innerText = currentSetHits;
+    document.getElementById('res-prob-eval').innerHTML = `理論上、${currentSetHits}本成功する確率: 約 <b>${(probK * 100).toFixed(1)}%</b>`;
+
+    const badgeEl = document.getElementById('rarity-badge');
+    badgeEl.innerText = rareLabel;
+    badgeEl.className = `px-3 py-1 rounded-full text-xs font-black ${badgeClass}`;
+
+    // 次ステージボタンの活性化制御
+    const nextBtn = document.getElementById('next-stage-btn');
+    if (currentStageId < STAGES.length) {
+      nextBtn.classList.remove('hidden');
+    } else {
+      nextBtn.classList.add('hidden');
+    }
+
+    document.getElementById('set-complete-card').classList.remove('hidden');
+
+    // グラフと統計指標の全更新
+    updateChart();
+  }
+
+  // 次のステージに進むボタン動作
+  function proceedToNextStage() {
+    if (currentStageId < STAGES.length) {
+      selectStage(currentStageId + 1);
+    }
+  }
+
+  // セット進行のリセット
+  function resetSetProgress() {
+    currentShotCount = 0;
+    currentSetHits = 0;
+    shotHistory = [];
+    isShooting = false;
+
+    document.getElementById('shootBtn').disabled = false;
+    document.getElementById('set-current-shots').innerText = '0';
+    document.getElementById('set-total-shots').innerText = n;
+    document.getElementById('set-complete-card').classList.add('hidden');
+
+    renderShotDots();
+  }
+
+  // アプリ全リセット
+  function resetAllApp() {
+    maxUnlockedStage = 1;
+    currentStageId = 1;
+    stageSetRecords = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    renderStageGrid();
+    loadStage(1);
+  }
+
+  // 二項分布の確率計算 P(X = k) = nCk * p^k * (1-p)^(n-k)
+  function calcBinomialProb(n, k, p) {
+    if (k < 0 || k > n) return 0;
+    return combination(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+  }
+
+  function combination(n, r) {
+    if (r < 0 || r > n) return 0;
+    if (r === 0 || r === n) return 1;
+    if (r > n / 2) r = n - r;
+    let res = 1;
+    for (let i = 1; i <= r; i++) {
+      res = res * (n - i + 1) / i;
+    }
+    return res;
+  }
+
+  // グラフと統計データの更新
+  function updateChart() {
+    const st = STAGES.find(s => s.id === currentStageId);
+    const records = stageSetRecords[currentStageId] || [];
+
+    document.getElementById('total-sets-count').innerText = records.length;
+
+    // 理論期待値 E[X] = n * p
+    const theoMean = n * st.prob;
+    document.getElementById('stat-theo-mean').innerText = `${theoMean.toFixed(1)} 本`;
+
+    // 実験平均値
+    let expMean = 0;
+    if (records.length > 0) {
+      expMean = records.reduce((a, b) => a + b, 0) / records.length;
+    }
+    document.getElementById('stat-exp-mean').innerText = `${expMean.toFixed(1)} 本`;
+
+    // ヒストグラムデータの作成 (0 ～ n 本)
+    const labels = [];
+    const theoData = [];
+    const expCounts = new Array(n + 1).fill(0);
+
+    for (let k = 0; k <= n; k++) {
+      labels.push(`${k}本`);
+      theoData.push((calcBinomialProb(n, k, st.prob) * 100).toFixed(1));
+    }
+
+    records.forEach(k => {
+      if (k >= 0 && k <= n) expCounts[k]++;
+    });
+
+    const expDataPct = expCounts.map(cnt => records.length > 0 ? ((cnt / records.length) * 100).toFixed(1) : 0);
+
+    if (chartInstance) {
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = expDataPct;
+      chartInstance.data.datasets[1].data = theoData;
+      chartInstance.update();
+    }
+  }
+
+  // Chart.js の初期化
+  function initChart() {
+    const ctx = document.getElementById('binomialChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'あなたの実験結果 (%)',
+            data: [],
+            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            borderRadius: 4
+          },
+          {
+            label: '理論上の二項分布 B(n, p) (%)',
+            data: [],
+            type: 'line',
+            borderColor: '#10b981',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#10b981',
+            fill: false,
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { font: { family: 'M PLUS Rounded 1c', size: 11, weight: 'bold' } }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'M PLUS Rounded 1c', size: 10, weight: 'bold' } }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: '割合 (%)', font: { size: 10, weight: 'bold' } },
+            ticks: { font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
